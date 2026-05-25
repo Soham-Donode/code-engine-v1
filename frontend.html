@@ -163,10 +163,11 @@
 
       <div class="controls">
         <select id="language">
-            <option value="python">Python 3.10</option>
-            <option value="cpp">C++ (GCC 13)</option> </select>
+          <option value="python">Python 3.10</option>
+          <option value="cpp">C++ (GCC 13)</option>
+        </select>
         <button id="runBtn" onclick="submitCode()">Run Code</button>
-    </div>
+      </div>
 
       <textarea
         id="codeEditor"
@@ -259,56 +260,61 @@
       async function pollStatus(id) {
         const runBtn = document.getElementById("runBtn");
 
-        const interval = setInterval(async () => {
-          try {
-            const response = await fetch(`${API_BASE}/status/${id}`);
-            if (!response.ok) return;
+        // 1. Open a persistent Server-Sent Events connection
+        const evtSource = new EventSource(`${API_BASE}/stream/${id}`);
 
-            const data = await response.json();
-            updateStatusDisplay(data.status);
+        // 2. Listen for messages pushed from the Go server
+        evtSource.onmessage = function (event) {
+          // Parse the JSON payload sent by Gin's c.SSEvent
+          const data = JSON.parse(event.data);
 
-            if (data.status === "running") {
-              runBtn.innerText = "Running...";
-              document.getElementById("stdoutPanel").innerText =
-                "Container initialized. Executing inside isolated Alpine container...";
+          updateStatusDisplay(data.status);
+
+          if (data.status === "running") {
+            runBtn.innerText = "Running...";
+            document.getElementById("stdoutPanel").innerText =
+              "Container initialized. Executing inside isolated container...";
+          }
+
+          // 3. Check if the backend reported a terminal state
+          if (
+            data.status === "completed" ||
+            data.status === "error" ||
+            data.status === "timeout"
+          ) {
+            // Immediately shut down the connection from the client side
+            evtSource.close();
+
+            // Render outputs
+            document.getElementById("stdoutPanel").innerText =
+              data.stdout ||
+              (data.status === "timeout"
+                ? "Process killed: Execution limit reached."
+                : "Process exited cleanly with no stdout.");
+
+            if (data.stderr) {
+              document.getElementById("stderrWrapper").style.display = "block";
+              document.getElementById("stderrPanel").innerText = data.stderr;
             }
 
-            // Check if execution has reached a terminal state
-            if (
-              data.status === "completed" ||
-              data.status === "error" ||
-              data.status === "timeout"
-            ) {
-              clearInterval(interval);
-
-              // Render final outputs
-              document.getElementById("stdoutPanel").innerText =
-                data.stdout ||
-                (data.status === "timeout"
-                  ? "Process killed: Execution execution limit reached."
-                  : "Process exited with no stdout output.");
-
-              if (data.stderr) {
-                document.getElementById("stderrWrapper").style.display =
-                  "block";
-                document.getElementById("stderrPanel").innerText = data.stderr;
-              }
-
-              if (data.execution_time_ms !== null) {
-                document.getElementById("metaInfo").innerText =
-                  `Duration: ${data.execution_time_ms}ms`;
-              }
-
-              // Unlock execution UI
-              runBtn.disabled = false;
-              runBtn.innerText = "Run Code";
+            if (data.execution_time_ms !== null) {
+              document.getElementById("metaInfo").innerText =
+                `Duration: ${data.execution_time_ms}ms`;
             }
-          } catch (err) {
-            clearInterval(interval);
+
+            // Unlock the UI
             runBtn.disabled = false;
             runBtn.innerText = "Run Code";
           }
-        }, 1000); // Poll once every second
+        };
+
+        // 4. Handle unexpected network drops
+        evtSource.onerror = function (err) {
+          console.error("Stream connection lost.");
+          evtSource.close();
+          runBtn.disabled = false;
+          runBtn.innerText = "Run Code";
+        };
       }
 
       function updateStatusDisplay(status) {

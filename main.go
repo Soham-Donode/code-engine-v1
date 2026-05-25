@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -102,6 +103,46 @@ func main() {
 		})
 	})
 
+	// Real-Time Server-Sent Events (SSE) Endpoint
+	r.GET("/stream/:id", func(c *gin.Context) {
+		subID := c.Param("id")
+
+		c.Writer.Header().Set("Content-Type", "text/event-stream")
+		c.Writer.Header().Set("Cache-Control", "no-cache")
+		c.Writer.Header().Set("Connection", "keep-alive")
+
+		c.Stream(func(w io.Writer) bool {
+			var status string
+			// CHANGED: Use pointers so Go can safely absorb Postgres NULL values
+			var stdout, stderr *string
+			var execTime *int
+
+			query := "SELECT status, stdout, stderr, execution_time_ms FROM submissions WHERE id = $1"
+			err := dataStore.DB.QueryRow(c.Request.Context(), query, subID).Scan(&status, &stdout, &stderr, &execTime)
+
+			if err != nil {
+				// Pro-tip: Print the error to your terminal so you aren't debugging blindly if it fails
+				fmt.Printf("[Stream Error] Failed to fetch sub %s: %v\n", subID, err)
+				return false
+			}
+
+			c.SSEvent("message", gin.H{
+				"status":            status,
+				"stdout":            stdout,
+				"stderr":            stderr,
+				"execution_time_ms": execTime,
+			})
+
+			if status == "completed" || status == "error" || status == "timeout" {
+				return false
+			}
+
+			time.Sleep(500 * time.Millisecond)
+
+			return true
+		})
+	})
+
 	fmt.Println("[System] Real-time Remote Code Execution Engine listening on port :8080...")
 	r.Run(":8080")
 }
@@ -119,20 +160,20 @@ func startBackgroundWorker(s *store.Store) {
 
 		fmt.Printf("\n[Worker Process] Claimed Task ID: %s\n", subID)
 
-if err := s.UpdateSubmissionToRunning(ctx, subID); err != nil {
-	continue
-}
+		if err := s.UpdateSubmissionToRunning(ctx, subID); err != nil {
+			continue
+		}
 
-code, language, err := s.GetSubmissionDetails(ctx, subID)
-if err != nil {
-	continue
-}
+		code, language, err := s.GetSubmissionDetails(ctx, subID)
+		if err != nil {
+			continue
+		}
 
-// Sandbox executes with a hard limit timeout
-res, err := runner.ExecuteCode(language, code, 7*time.Second)
-if err != nil {
-	continue
-}
+		// Sandbox executes with a hard limit timeout
+		res, err := runner.ExecuteCode(language, code, 7*time.Second)
+		if err != nil {
+			continue
+		}
 
 		finalStatus := "completed"
 		if res.TimedOut {
