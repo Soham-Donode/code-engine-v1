@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,101 +10,85 @@ import (
 	"time"
 
 	"code-engine/runner"
-	"code-engine/store"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
+	// Import your database package here
 )
 
-// Define the incoming request structure
-type SubmitRequest struct {
-	Language string `json:"language" binding:"required"`
-	Code     string `json:"code" binding:"required"`
+// StatusCache defines the lightweight payload stored in Redis RAM
+type StatusCache struct {
+	Status          string  `json:"status"`
+	Stdout          *string `json:"stdout"`
+	Stderr          *string `json:"stderr"`
+	ExecutionTimeMs *int    `json:"execution_time_ms"`
 }
 
+var redisClient *redis.Client
+
 func main() {
-	// 1. Initialize Storage Connections
-	fmt.Println("[System] Connecting to Infrastructure Services...")
-	dataStore, err := store.NewStore()
-	if err != nil {
-		panic(err)
-	}
-	defer dataStore.DB.Close()
-	defer dataStore.Redis.Close()
+	// 1. Initialize Redis Connection
+	redisClient = redis.NewClient(&redis.Options{
+		Addr: "localhost:6379", // Use "redis:6379" if running via docker-compose
+	})
 
-	// 2. Fire up our background worker execution loop in an isolated goroutine
-	go startBackgroundWorker(dataStore)
+	// 2. Start the Background Worker
+	go StartWorker(context.Background(), redisClient)
 
-	// 3. Initialize the HTTP Gin Server
+	// 3. Start Gin Router
 	r := gin.Default()
 
-	// Apply the foolproof, bulletproof production CORS policy:
 	r.Use(func(c *gin.Context) {
+		// 1. Allow the frontend to connect
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		// CRITICAL LINE: Added 'content-type' explicitly in lowercase as well
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, content-type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
 
+		// 2. Explicitly allow the HTTP methods your app needs
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+
+		// 3. Allow custom headers like Content-Type
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		// 4. CRITICAL FIX: If the browser is just sending a Preflight OPTIONS request,
+		// tell it "Yes, you are allowed!" and instantly stop processing the route.
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return
 		}
+
 		c.Next()
 	})
 
-	// Route 1: Code Ingestion Endpoint
+	// --- ROUTE 1: INGESTION ---
 	r.POST("/submit", func(c *gin.Context) {
-		var req SubmitRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		var req struct {
+			Language string `json:"language"`
+			Code     string `json:"code"`
+		}
+		if err := c.BindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
 			return
 		}
 
-		// Store initially in Postgres
-		subID, err := dataStore.CreateSubmission(c.Request.Context(), req.Language, req.Code)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database write failure"})
-			return
-		}
+		// Save to Postgres to generate ID (Mocked here)
+		subID := fmt.Sprintf("%d", time.Now().UnixNano())
 
-		// Push to Redis Queue Stream
-		if err := dataStore.EnqueueSubmission(c.Request.Context(), subID); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Queue streaming failure"})
-			return
-		}
+		queuedState, _ := json.Marshal(StatusCache{Status: "queued"})
+		redisClient.Set(c.Request.Context(), "status:"+subID, queuedState, 1*time.Hour)
 
-		// Return tracking ID immediately
-		c.JSON(http.StatusAccepted, gin.H{
-			"submission_id": subID,
-			"status":        "queued",
+		// Push to Redis Stream Queue
+		redisClient.XAdd(c.Request.Context(), &redis.XAddArgs{
+			Stream: "code_queue",
+			Values: map[string]interface{}{
+				"id":       subID,
+				"language": req.Language,
+				"code":     req.Code,
+			},
 		})
+
+		c.JSON(http.StatusOK, gin.H{"submission_id": subID})
 	})
 
-	// Route 2: Status Checking & Result Retrieval Endpoint
-	r.GET("/status/:id", func(c *gin.Context) {
-		id := c.Param("id")
-
-		var status, stdout, stderr string
-		var executionTime *int
-
-		// Query current state directly from PostgreSQL
-		query := "SELECT status, stdout, stderr, execution_time_ms FROM submissions WHERE id = $1"
-		err := dataStore.DB.QueryRow(c.Request.Context(), query, id).Scan(&status, &stdout, &stderr, &executionTime)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Submission tracking record not found"})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"submission_id":     id,
-			"status":            status,
-			"stdout":            stdout,
-			"stderr":            stderr,
-			"execution_time_ms": executionTime,
-		})
-	})
-
-	// Real-Time Server-Sent Events (SSE) Endpoint
+	// --- ROUTE 2: REAL-TIME REDIS CACHE STREAM ---
 	r.GET("/stream/:id", func(c *gin.Context) {
 		subID := c.Param("id")
 
@@ -112,84 +97,128 @@ func main() {
 		c.Writer.Header().Set("Connection", "keep-alive")
 
 		c.Stream(func(w io.Writer) bool {
-			var status string
-			// CHANGED: Use pointers so Go can safely absorb Postgres NULL values
-			var stdout, stderr *string
-			var execTime *int
+			// Read directly from Redis RAM (Lightning Fast)
+			val, err := redisClient.Get(c.Request.Context(), "status:"+subID).Result()
 
-			query := "SELECT status, stdout, stderr, execution_time_ms FROM submissions WHERE id = $1"
-			err := dataStore.DB.QueryRow(c.Request.Context(), query, subID).Scan(&status, &stdout, &stderr, &execTime)
+			var cacheData StatusCache
 
-			if err != nil {
-				// Pro-tip: Print the error to your terminal so you aren't debugging blindly if it fails
-				fmt.Printf("[Stream Error] Failed to fetch sub %s: %v\n", subID, err)
+			if err == redis.Nil {
+				// Key not found = Worker hasn't processed it yet
+				cacheData = StatusCache{Status: "queued"}
+			} else if err != nil {
+				fmt.Printf("[Stream Error] Redis read failed: %v\n", err)
 				return false
+			} else {
+				// Parse JSON string from Redis back to struct
+				json.Unmarshal([]byte(val), &cacheData)
 			}
 
 			c.SSEvent("message", gin.H{
-				"status":            status,
-				"stdout":            stdout,
-				"stderr":            stderr,
-				"execution_time_ms": execTime,
+				"status":            cacheData.Status,
+				"stdout":            cacheData.Stdout,
+				"stderr":            cacheData.Stderr,
+				"execution_time_ms": cacheData.ExecutionTimeMs,
 			})
 
-			if status == "completed" || status == "error" || status == "timeout" {
+			// Close stream gracefully on terminal states
+			if cacheData.Status == "completed" || cacheData.Status == "error" || cacheData.Status == "timeout" {
 				return false
 			}
 
 			time.Sleep(500 * time.Millisecond)
-
 			return true
 		})
 	})
 
-	fmt.Println("[System] Real-time Remote Code Execution Engine listening on port :8080...")
+	fmt.Println("API running on :8080")
 	r.Run(":8080")
 }
 
-// Background worker loops indefinitely, waiting to execute items from the Redis Queue
-func startBackgroundWorker(s *store.Store) {
-	ctx := context.Background()
-	fmt.Println("[Worker Thread] Background consumer loop initialized. Awaiting tasks...")
+func StartWorker(ctx context.Context, redisClient *redis.Client) {
+	fmt.Println("Worker listening to Redis Stream: code_queue...")
+
+	if err := redisClient.XGroupCreateMkStream(ctx, "code_queue", "worker_group", "$").Err(); err != nil && !strings.Contains(err.Error(), "BUSYGROUP") {
+		fmt.Printf("[Worker Error] Failed creating group: %v\n", err)
+	}
 
 	for {
-		subID, err := s.DequeueSubmission(ctx)
-		if err != nil {
+		// 1. Pull next job from Redis Stream
+		streams, err := redisClient.XReadGroup(ctx, &redis.XReadGroupArgs{
+			Group:    "worker_group",
+			Consumer: "worker_1",
+			Streams:  []string{"code_queue", ">"},
+			Count:    1,
+			Block:    2 * time.Second,
+		}).Result()
+
+		if err == redis.Nil {
+			continue // No new jobs
+		} else if err != nil {
+			if strings.Contains(err.Error(), "NOGROUP") {
+				_ = redisClient.XGroupCreateMkStream(ctx, "code_queue", "worker_group", "$").Err()
+			}
+			time.Sleep(1 * time.Second)
 			continue
 		}
 
-		fmt.Printf("\n[Worker Process] Claimed Task ID: %s\n", subID)
+		message := streams[0].Messages[0]
+		subID := message.Values["id"].(string)
+		language := message.Values["language"].(string)
+		code := message.Values["code"].(string)
 
-		if err := s.UpdateSubmissionToRunning(ctx, subID); err != nil {
-			continue
+		// --- A. SET RUNNING STATE ---
+
+		// WRITE TO REDIS CACHE
+		runningState, _ := json.Marshal(StatusCache{Status: "running"})
+		redisClient.Set(ctx, "status:"+subID, runningState, 1*time.Hour)
+
+		// --- B. EXECUTE CODE ---
+
+		startTime := time.Now()
+		res, execErr := runner.ExecuteCode(language, code, 7*time.Second)
+		duration := int(time.Since(startTime).Milliseconds())
+
+		status := "completed"
+		var stdoutPtr *string
+		var stderrPtr *string
+		execTimePtr := &duration
+
+		if execErr != nil {
+			status = "error"
+			errMsg := execErr.Error()
+			stderrPtr = &errMsg
+		} else if res != nil {
+			if res.TimedOut {
+				status = "timeout"
+			} else if res.Stderr != "" {
+				status = "error"
+			}
+			if res.Stdout != "" {
+				stdoutPtr = &res.Stdout
+			}
+			if res.Stderr != "" {
+				stderrPtr = &res.Stderr
+			}
+			execTimePtr = func() *int {
+				ms := int(res.Duration.Milliseconds())
+				return &ms
+			}()
 		}
 
-		code, language, err := s.GetSubmissionDetails(ctx, subID)
-		if err != nil {
-			continue
-		}
+		// --- C. SET COMPLETED STATE ---
 
-		// Sandbox executes with a hard limit timeout
-		res, err := runner.ExecuteCode(language, code, 7*time.Second)
-		if err != nil {
-			continue
-		}
+		// WRITE FINAL RESULTS TO REDIS CACHE
+		completedState, _ := json.Marshal(StatusCache{
+			Status:          status,
+			Stdout:          stdoutPtr,
+			Stderr:          stderrPtr,
+			ExecutionTimeMs: execTimePtr,
+		})
+		redisClient.Set(ctx, "status:"+subID, completedState, 1*time.Hour)
 
-		finalStatus := "completed"
-		if res.TimedOut {
-			finalStatus = "timeout"
-		} else if res.Stderr != "" {
-			finalStatus = "error"
-		}
+		// Acknowledge task completion in the Stream
+		redisClient.XAck(ctx, "code_queue", "worker_group", message.ID)
 
-		s.UpdateSubmissionStatus(
-			ctx,
-			subID,
-			finalStatus,
-			strings.TrimSpace(res.Stdout), // <-- Update this to TrimSpace
-			strings.TrimSpace(res.Stderr), // <-- Update this to TrimSpace
-			int(res.Duration.Milliseconds()),
-		)
-		fmt.Printf("[Worker Process] Finished Job %s -> State: %s\n", subID, finalStatus)
+		fmt.Printf("Processed submission %s in %d ms\n", subID, duration)
 	}
 }
