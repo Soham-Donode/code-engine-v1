@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Code Execution Engine</title>
+    <style>
+      :root {
+        --bg-primary: #0d1117;
+        --bg-secondary: #161b22;
+        --border-color: #30363d;
+        --text-main: #c9d1d9;
+        --accent-color: #238636;
+        --accent-hover: #2ea043;
+        --status-queued: #e3b341;
+        --status-success: #58a6ff;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
+          sans-serif;
+        background-color: var(--bg-primary);
+        color: var(--text-main);
+        margin: 0;
+        padding: 40px 20px;
+        display: flex;
+        justify-content: center;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 800px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      h2 {
+        margin: 0 0 10px 0;
+        font-weight: 600;
+        letter-spacing: -0.5px;
+      }
+
+      .controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      select {
+        background-color: var(--bg-secondary);
+        color: var(--text-main);
+        border: 1px solid var(--border-color);
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 14px;
+        outline: none;
+        cursor: pointer;
+      }
+
+      textarea {
+        width: 100%;
+        height: 300px;
+        background-color: var(--bg-secondary);
+        color: #e6edf3;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 16px;
+        font-family:
+          "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        font-size: 14px;
+        line-height: 1.6;
+        resize: vertical;
+        box-sizing: border-box;
+        outline: none;
+      }
+
+      textarea:focus {
+        border-color: #58a6ff;
+      }
+
+      button {
+        background-color: var(--accent-color);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      button:hover {
+        background-color: var(--accent-hover);
+      }
+
+      button:disabled {
+        background-color: var(--border-color);
+        cursor: not-allowed;
+      }
+
+      .output-box {
+        background-color: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 20px;
+        display: none;
+      }
+
+      .output-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+        font-size: 14px;
+      }
+
+      .status-badge {
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 12px;
+        border: 1px solid currentColor;
+      }
+
+      .status-queued {
+        color: var(--status-queued);
+      }
+      .status-running {
+        color: #ff7b72;
+      }
+      .status-completed {
+        color: #7ee787;
+      }
+      .status-timeout {
+        color: #ffa657;
+      }
+
+      pre {
+        margin: 0;
+        font-family:
+          "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        font-size: 14px;
+        white-space: pre-wrap;
+        word-break: break-all;
+        line-height: 1.5;
+      }
+
+      .stderr {
+        color: #ff7b72;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Remote Code Sandbox</h2>
+
+      <div class="controls">
+        <select id="language">
+          <option value="python">Python 3.10</option>
+        </select>
+        <button id="runBtn" onclick="submitCode()">Run Code</button>
+      </div>
+
+      <textarea
+        id="codeEditor"
+        placeholder="# Write your Python code here...&#10;print('Hello World!')"
+        spellcheck="false"
+      ></textarea>
+
+      <div id="outputContainer" class="output-box">
+        <div class="output-header">
+          <div>
+            Status: <span id="statusBadge" class="status-badge">queued</span>
+          </div>
+          <div id="metaInfo">--</div>
+        </div>
+        <div>
+          <strong
+            style="
+              font-size: 12px;
+              color: #8b949e;
+              display: block;
+              margin-bottom: 5px;
+            "
+            >STDOUT</strong
+          >
+          <pre id="stdoutPanel">Waiting for execution output...</pre>
+        </div>
+        <div id="stderrWrapper" style="display: none">
+          <strong
+            style="
+              font-size: 12px;
+              color: #ff7b72;
+              display: block;
+              margin-bottom: 5px;
+              margin-top: 15px;
+            "
+            >STDERR</strong
+          >
+          <pre id="stderrPanel" class="stderr"></pre>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE = "http://localhost:8080";
+
+      async function submitCode() {
+        const code = document.getElementById("codeEditor").value;
+        const language = document.getElementById("language").value;
+        const runBtn = document.getElementById("runBtn");
+        const outputContainer = document.getElementById("outputContainer");
+
+        if (!code.trim()) {
+          alert("Please enter some code before running.");
+          return;
+        }
+
+        // Lock button UI and reset outputs
+        runBtn.disabled = true;
+        runBtn.innerText = "Queuing...";
+        outputContainer.style.display = "block";
+        updateStatusDisplay("queued");
+        document.getElementById("stdoutPanel").innerText =
+          "Sent payload to queue. Awaiting worker processing...";
+        document.getElementById("stderrWrapper").style.display = "none";
+        document.getElementById("metaInfo").innerText = "--";
+
+        try {
+          // 1. Send the ingestion payload to Gin API
+          const response = await fetch(`${API_BASE}/submit`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ language, code }),
+          });
+
+          if (!response.ok) throw new Error("Server ingestion error");
+
+          const data = await response.json();
+          const submissionId = data.submission_id;
+
+          // 2. Start polling for the asynchronous result
+          pollStatus(submissionId);
+        } catch (err) {
+          document.getElementById("stdoutPanel").innerText =
+            "Failed to connect to the backend execution server.";
+          runBtn.disabled = false;
+          runBtn.innerText = "Run Code";
+        }
+      }
+
+      async function pollStatus(id) {
+        const runBtn = document.getElementById("runBtn");
+
+        const interval = setInterval(async () => {
+          try {
+            const response = await fetch(`${API_BASE}/status/${id}`);
+            if (!response.ok) return;
+
+            const data = await response.json();
+            updateStatusDisplay(data.status);
+
+            if (data.status === "running") {
+              runBtn.innerText = "Running...";
+              document.getElementById("stdoutPanel").innerText =
+                "Container initialized. Executing inside isolated Alpine container...";
+            }
+
+            // Check if execution has reached a terminal state
+            if (
+              data.status === "completed" ||
+              data.status === "error" ||
+              data.status === "timeout"
+            ) {
+              clearInterval(interval);
+
+              // Render final outputs
+              document.getElementById("stdoutPanel").innerText =
+                data.stdout ||
+                (data.status === "timeout"
+                  ? "Process killed: Execution execution limit reached."
+                  : "Process exited with no stdout output.");
+
+              if (data.stderr) {
+                document.getElementById("stderrWrapper").style.display =
+                  "block";
+                document.getElementById("stderrPanel").innerText = data.stderr;
+              }
+
+              if (data.execution_time_ms !== null) {
+                document.getElementById("metaInfo").innerText =
+                  `Duration: ${data.execution_time_ms}ms`;
+              }
+
+              // Unlock execution UI
+              runBtn.disabled = false;
+              runBtn.innerText = "Run Code";
+            }
+          } catch (err) {
+            clearInterval(interval);
+            runBtn.disabled = false;
+            runBtn.innerText = "Run Code";
+          }
+        }, 1000); // Poll once every second
+      }
+
+      function updateStatusDisplay(status) {
+        const badge = document.getElementById("statusBadge");
+        badge.innerText = status;
+        badge.className = `status-badge status-${status}`;
+      }
+    </script>
+  </body>
+</html>
