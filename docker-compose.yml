@@ -1,4 +1,4 @@
-version: "3.8"
+version: '3.8'
 
 services:
   postgres:
@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: engine_password
       POSTGRES_DB: code_engine
     ports:
-      - "5432:5432"
+      - "5435:5432" # <-- Map external port 5435 on your Mac to internal port 5432 in Docker
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
