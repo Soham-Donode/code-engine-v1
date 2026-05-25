@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -28,8 +29,12 @@ var redisClient *redis.Client
 
 func main() {
 	// 1. Initialize Redis Connection
+	redisAddr := os.Getenv("REDIS_URL")
+	if redisAddr == "" {
+		redisAddr = "localhost:6379" // Default for local dev
+	}
 	redisClient = redis.NewClient(&redis.Options{
-		Addr: "localhost:6379", // Use "redis:6379" if running via docker-compose
+		Addr: redisAddr,
 	})
 
 	// 2. Start the Background Worker
@@ -185,8 +190,12 @@ func StartWorker(ctx context.Context, redisClient *redis.Client) {
 
 		if execErr != nil {
 			status = "error"
-			errMsg := execErr.Error()
-			stderrPtr = &errMsg
+			if res != nil && res.Stderr != "" {
+				stderrPtr = &res.Stderr
+			} else {
+				errMsg := execErr.Error()
+				stderrPtr = &errMsg
+			}
 		} else if res != nil {
 			if res.TimedOut {
 				status = "timeout"

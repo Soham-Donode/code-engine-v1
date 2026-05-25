@@ -211,7 +211,8 @@
     </div>
 
     <script>
-      const API_BASE = "http://localhost:8080";
+      const API_BASE = "http://localhost";
+      // (Port 80 is the default web port, so you don't even need to type it)
 
       async function submitCode() {
         const code = document.getElementById("codeEditor").value;
