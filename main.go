@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"code-engine/runner"
@@ -118,20 +119,20 @@ func startBackgroundWorker(s *store.Store) {
 
 		fmt.Printf("\n[Worker Process] Claimed Task ID: %s\n", subID)
 
-		if err := s.UpdateSubmissionToRunning(ctx, subID); err != nil {
-			continue
-		}
+if err := s.UpdateSubmissionToRunning(ctx, subID); err != nil {
+	continue
+}
 
-		code, _, err := s.GetSubmissionDetails(ctx, subID)
-		if err != nil {
-			continue
-		}
+code, language, err := s.GetSubmissionDetails(ctx, subID)
+if err != nil {
+	continue
+}
 
-		// Sandbox executes with a hard limit timeout
-		res, err := runner.ExecutePython(code, 7*time.Second)
-		if err != nil {
-			continue
-		}
+// Sandbox executes with a hard limit timeout
+res, err := runner.ExecuteCode(language, code, 7*time.Second)
+if err != nil {
+	continue
+}
 
 		finalStatus := "completed"
 		if res.TimedOut {
@@ -144,8 +145,8 @@ func startBackgroundWorker(s *store.Store) {
 			ctx,
 			subID,
 			finalStatus,
-			res.Stdout,
-			res.Stderr,
+			strings.TrimSpace(res.Stdout), // <-- Update this to TrimSpace
+			strings.TrimSpace(res.Stderr), // <-- Update this to TrimSpace
 			int(res.Duration.Milliseconds()),
 		)
 		fmt.Printf("[Worker Process] Finished Job %s -> State: %s\n", subID, finalStatus)
