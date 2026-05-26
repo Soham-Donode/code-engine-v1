@@ -16,7 +16,7 @@ type ExecutionResult struct {
 }
 
 // ExecuteCode dynamically handles different language engines inside dedicated sandbox images
-func ExecuteCode(language, code string, timeout time.Duration) (*ExecutionResult, error) {
+func ExecuteCode(language, code, input string, timeout time.Duration) (*ExecutionResult, error) {
 	var image string
 	var cmdArgs []string
 
@@ -24,13 +24,16 @@ func ExecuteCode(language, code string, timeout time.Duration) (*ExecutionResult
 	switch strings.ToLower(language) {
 	case "python":
 		image = "python:3.10-alpine"
-		// "-" tells python to read script from stdin
-		cmdArgs = []string{"python", "-"}
+		// "-c" runs string as inline script
+		cmdArgs = []string{"python", "-c", code}
 
 	case "cpp", "c++":
 		image = "gcc:13.2.0"
-		// read stdin to a file, compile, and run it
-		runCommand := "cat > /tmp/main.cpp && g++ -O0 /tmp/main.cpp -o /tmp/main && /tmp/main"
+		// echo the code into main.cpp using bash, compile it, and run it
+		runCommand := fmt.Sprintf(`cat << 'EOF' > /tmp/main.cpp
+%s
+EOF
+g++ -O0 /tmp/main.cpp -o /tmp/main && /tmp/main`, code)
 		cmdArgs = []string{"sh", "-c", runCommand}
 
 	default:
@@ -52,8 +55,8 @@ func ExecuteCode(language, code string, timeout time.Duration) (*ExecutionResult
 
 	cmd := exec.CommandContext(ctx, "docker", dockerArgs...)
 
-	// Pipe the actual code payload heavily into stdin for the docker container
-	cmd.Stdin = strings.NewReader(code)
+	// Pipe the actual user input heavily into stdin for the docker container
+	cmd.Stdin = strings.NewReader(input)
 
 	var stdoutBuf, stderrBuf strings.Builder
 	cmd.Stdout = &stdoutBuf

@@ -68,6 +68,7 @@ func main() {
 		var req struct {
 			Language string `json:"language"`
 			Code     string `json:"code"`
+			Input    string `json:"input"`
 		}
 		if err := c.BindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
@@ -87,6 +88,7 @@ func main() {
 				"id":       subID,
 				"language": req.Language,
 				"code":     req.Code,
+				"input":    req.Input,
 			},
 		})
 
@@ -171,6 +173,11 @@ func StartWorker(ctx context.Context, redisClient *redis.Client) {
 		language := message.Values["language"].(string)
 		code := message.Values["code"].(string)
 
+		input := ""
+		if val, exists := message.Values["input"]; exists && val != nil {
+			input = val.(string)
+		}
+
 		// --- A. SET RUNNING STATE ---
 
 		// WRITE TO REDIS CACHE
@@ -180,7 +187,7 @@ func StartWorker(ctx context.Context, redisClient *redis.Client) {
 		// --- B. EXECUTE CODE ---
 
 		startTime := time.Now()
-		res, execErr := runner.ExecuteCode(language, code, 7*time.Second)
+		res, execErr := runner.ExecuteCode(language, code, input, 7*time.Second)
 		duration := int(time.Since(startTime).Milliseconds())
 
 		status := "completed"
