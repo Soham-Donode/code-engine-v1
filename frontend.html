@@ -85,6 +85,16 @@
         padding: 0;
       }
 
+      /* Global Selection Overrides (faint indigo/slate, easy on eyes) */
+      ::selection {
+        background-color: rgba(79, 70, 229, 0.15) !important;
+        color: inherit !important;
+      }
+      ::-moz-selection {
+        background-color: rgba(79, 70, 229, 0.15) !important;
+        color: inherit !important;
+      }
+
       body {
         background-color: var(--bg-main);
         color: var(--text-primary);
@@ -1117,8 +1127,8 @@ int main() {
             "editor.lineHighlightBackground": "#15151b",
             "editorLineNumber.foreground": "#454553",
             "editorLineNumber.activeForeground": "#a1a1aa",
-            "editor.selectionBackground": "rgba(255, 255, 255, 0.05)",
-            "editor.inactiveSelectionBackground": "rgba(255, 255, 255, 0.03)",
+            "editor.selectionBackground": "#3e3e4f",
+            "editor.inactiveSelectionBackground": "#282835",
             "editorWidget.background": "#141418",
             "editorWidget.border": "#1e1e24",
             "input.background": "#09090b",
@@ -1151,8 +1161,8 @@ int main() {
             "editor.lineHighlightBackground": "#f4f4f5",
             "editorLineNumber.foreground": "#a1a1aa",
             "editorLineNumber.activeForeground": "#71717a",
-            "editor.selectionBackground": "rgba(79, 70, 229, 0.08)",
-            "editor.inactiveSelectionBackground": "rgba(79, 70, 229, 0.04)",
+            "editor.selectionBackground": "#cbd5e1",
+            "editor.inactiveSelectionBackground": "#e2e8f0",
             "editorWidget.background": "#f4f4f5",
             "editorWidget.border": "#e4e4e7",
             "input.background": "#ffffff",
