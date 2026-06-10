@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Remote Code Engine — IDE</title>
+    <title>CodeEngine — SaaS IDE</title>
 
-    <!-- Google Fonts: Plus Jakarta Sans for UI & JetBrains Mono for Code -->
+    <!-- Google Fonts: Inter for UI & JetBrains Mono for Code -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap"
       rel="stylesheet"
     />
 
@@ -26,29 +26,57 @@
 
     <style>
       :root {
-        --bg-main: #0a0b0e;
-        --bg-panel: #111318;
-        --bg-header: #171a21;
-        --bg-active: #1e222b;
-        --border: #262b35;
-        --border-glow: #3d4554;
+        /* Default: Dark Mode Variables */
+        --bg-main: #060608;
+        --bg-panel: #0a0a0d;
+        --bg-header: #0e0e12;
+        --bg-active: #141419;
+        --border: #181822;
+        --border-glow: #2c2c3d;
 
-        --text-primary: #f3f4f6;
-        --text-secondary: #a1a8b9;
-        --text-muted: #5e6675;
+        --text-primary: #f4f4f5;
+        --text-secondary: #a1a1aa;
+        --text-muted: #52525b;
 
-        --accent: #6366f1; /* Indigo */
-        --accent-hover: #4f46e5;
-        --accent-glow: rgba(99, 102, 241, 0.25);
+        --accent: #4f46e5; /* Indigo */
+        --accent-hover: #4338ca;
+        --accent-glow: rgba(79, 70, 229, 0.15);
 
         --success: #10b981; /* Emerald */
-        --success-glow: rgba(16, 185, 129, 0.15);
+        --success-glow: rgba(16, 185, 129, 0.1);
 
         --error: #ef4444; /* Red */
-        --error-glow: rgba(239, 68, 68, 0.15);
+        --error-glow: rgba(239, 68, 68, 0.1);
 
         --warning: #f59e0b; /* Amber */
-        --warning-glow: rgba(245, 158, 11, 0.15);
+        --warning-glow: rgba(245, 158, 11, 0.1);
+      }
+
+      /* Light Mode Variables override */
+      body.light-mode {
+        --bg-main: #fafafa;
+        --bg-panel: #ffffff;
+        --bg-header: #f4f4f5;
+        --bg-active: #e4e4e7;
+        --border: #e4e4e7;
+        --border-glow: #d4d4d8;
+
+        --text-primary: #09090b;
+        --text-secondary: #71717a;
+        --text-muted: #a1a1aa;
+
+        --accent: #4f46e5;
+        --accent-hover: #4338ca;
+        --accent-glow: rgba(79, 70, 229, 0.08);
+
+        --success: #059669;
+        --success-glow: rgba(5, 150, 105, 0.05);
+
+        --error: #dc2626;
+        --error-glow: rgba(220, 38, 38, 0.05);
+
+        --warning: #d97706;
+        --warning-glow: rgba(217, 119, 6, 0.05);
       }
 
       * {
@@ -61,63 +89,72 @@
         background-color: var(--bg-main);
         color: var(--text-primary);
         font-family:
-          "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
-          Roboto, sans-serif;
+          "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         height: 100vh;
         overflow: hidden;
         display: flex;
         flex-direction: column;
+        letter-spacing: -0.01em;
+        transition: background-color 0.2s ease-out, color 0.2s ease-out;
       }
 
       /* Navbar styling */
       .navbar {
-        height: 56px;
+        height: 52px;
         background-color: var(--bg-header);
         border-bottom: 1px solid var(--border);
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 16px;
+        padding: 0 20px;
         z-index: 10;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        transition: background-color 0.2s ease-out, border-color 0.2s ease-out;
       }
 
       .logo-area {
         display: flex;
         align-items: center;
-        gap: 8px;
-        font-weight: 700;
-        font-size: 16px;
-        letter-spacing: -0.5px;
+        gap: 10px;
       }
 
       .logo-icon {
         display: flex;
         align-items: center;
         justify-content: center;
-        background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        color: white;
-        box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+        background-color: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border);
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        color: var(--text-primary);
+      }
+
+      body.light-mode .logo-icon {
+        background-color: #ffffff;
       }
 
       .logo-text {
-        background: linear-gradient(135deg, #f3f4f6 30%, #a1a8b9 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        font-weight: 600;
+        font-size: 14px;
+        letter-spacing: -0.02em;
+        color: var(--text-primary);
       }
 
       .logo-badge {
-        font-size: 10px;
-        font-weight: 700;
+        font-size: 9px;
+        font-weight: 500;
         text-transform: uppercase;
-        background-color: var(--border);
+        background-color: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border);
         color: var(--text-secondary);
         padding: 2px 6px;
         border-radius: 4px;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.05em;
+      }
+
+      body.light-mode .logo-badge {
+        background-color: #ffffff;
       }
 
       .nav-controls {
@@ -126,71 +163,103 @@
         gap: 12px;
       }
 
-      /* Buttons & Forms controls */
+      /* Dropdowns */
       .styled-select {
-        background-color: var(--bg-panel);
+        background-color: rgba(255, 255, 255, 0.02);
         color: var(--text-primary);
         border: 1px solid var(--border);
-        padding: 8px 14px;
+        padding: 6px 12px;
         border-radius: 6px;
         font-size: 13px;
-        font-weight: 600;
+        font-weight: 500;
         outline: none;
         cursor: pointer;
-        transition: all 0.2s;
-        min-width: 130px;
+        transition: all 0.15s ease-out;
+        min-width: 120px;
+      }
+
+      body.light-mode .styled-select {
+        background-color: #ffffff;
       }
 
       .styled-select:hover {
+        background-color: rgba(255, 255, 255, 0.05);
         border-color: var(--border-glow);
-        background-color: var(--bg-active);
       }
 
+      body.light-mode .styled-select:hover {
+        background-color: #f4f4f5;
+      }
+
+      .styled-select:focus {
+        border-color: var(--accent);
+      }
+
+      /* Premium SaaS CTA button */
       .btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
-        background-color: var(--bg-panel);
+        gap: 6px;
+        background-color: rgba(255, 255, 255, 0.03);
         color: var(--text-primary);
         border: 1px solid var(--border);
-        padding: 8px 16px;
+        padding: 6px 14px;
         border-radius: 6px;
         font-size: 13px;
-        font-weight: 600;
+        font-weight: 500;
         cursor: pointer;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.15s ease-out;
         user-select: none;
       }
 
+      body.light-mode .btn {
+        background-color: #ffffff;
+      }
+
       .btn:hover {
-        background-color: var(--bg-active);
+        background-color: rgba(255, 255, 255, 0.06);
         border-color: var(--border-glow);
       }
 
+      body.light-mode .btn:hover {
+        background-color: #f4f4f5;
+      }
+
       .btn-primary {
-        background-color: var(--accent);
-        border-color: var(--accent);
-        color: white;
-        box-shadow: 0 4px 12px var(--accent-glow);
+        background-color: #fafafa;
+        border-color: #fafafa;
+        color: #09090b;
+        font-weight: 600;
+      }
+
+      body.light-mode .btn-primary {
+        background-color: #09090b;
+        border-color: #09090b;
+        color: #ffffff;
       }
 
       .btn-primary:hover {
-        background-color: var(--accent-hover);
-        border-color: var(--accent-hover);
-        box-shadow: 0 6px 16px var(--accent-glow);
-        transform: translateY(-1px);
+        background-color: #e4e4e7;
+        border-color: #e4e4e7;
+      }
+
+      body.light-mode .btn-primary:hover {
+        background-color: #27272a;
+        border-color: #27272a;
       }
 
       .btn-primary:active {
-        transform: translateY(0);
+        background-color: #d4d4d8;
+      }
+
+      body.light-mode .btn-primary:active {
+        background-color: #3f3f46;
       }
 
       .btn:disabled {
-        opacity: 0.5;
+        opacity: 0.4;
         cursor: not-allowed;
-        transform: none !important;
-        box-shadow: none !important;
       }
 
       .icon-btn {
@@ -203,25 +272,29 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: all 0.2s;
+        transition: all 0.15s ease-out;
       }
 
       .icon-btn:hover {
         color: var(--text-primary);
-        background-color: var(--bg-active);
+        background-color: rgba(255, 255, 255, 0.03);
         border-color: var(--border);
       }
 
-      .icon-btn svg {
-        width: 16px;
-        height: 16px;
+      body.light-mode .icon-btn:hover {
+        background-color: rgba(0, 0, 0, 0.03);
       }
 
-      /* Workspace splits layout */
+      .icon-btn svg {
+        width: 15px;
+        height: 15px;
+      }
+
+      /* Workspace splits */
       .workspace {
         display: flex;
         flex: 1;
-        height: calc(100vh - 56px);
+        height: calc(100vh - 52px);
         position: relative;
         overflow: hidden;
       }
@@ -233,6 +306,8 @@
         background-color: var(--bg-panel);
         height: 100%;
         min-width: 300px;
+        border-right: 1px solid var(--border);
+        transition: background-color 0.2s ease-out, border-color 0.2s ease-out;
       }
 
       .io-pane {
@@ -242,17 +317,17 @@
         background-color: var(--bg-main);
         height: 100%;
         min-width: 300px;
-        border-left: 1px solid var(--border);
+        transition: background-color 0.2s ease-out;
       }
 
-      /* Resizers */
+      /* Dividers */
       .resizer-v {
-        width: 6px;
+        width: 4px;
         background-color: var(--border);
         cursor: col-resize;
         position: relative;
         z-index: 5;
-        transition: background-color 0.2s;
+        transition: background-color 0.15s ease-out;
       }
 
       .resizer-v:hover,
@@ -260,25 +335,13 @@
         background-color: var(--accent);
       }
 
-      .resizer-v::after {
-        content: "";
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 2px;
-        height: 24px;
-        background-color: var(--text-muted);
-        border-radius: 1px;
-      }
-
       .resizer-h {
-        height: 6px;
+        height: 4px;
         background-color: var(--border);
         cursor: row-resize;
         position: relative;
         z-index: 5;
-        transition: background-color 0.2s;
+        transition: background-color 0.15s ease-out;
       }
 
       .resizer-h:hover,
@@ -286,19 +349,7 @@
         background-color: var(--accent);
       }
 
-      .resizer-h::after {
-        content: "";
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 24px;
-        height: 2px;
-        background-color: var(--text-muted);
-        border-radius: 1px;
-      }
-
-      /* Sections & Headers */
+      /* Pane headers */
       .pane-header {
         height: 40px;
         background-color: var(--bg-header);
@@ -307,35 +358,41 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        font-size: 12px;
-        font-weight: 600;
+        font-size: 11px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
         color: var(--text-secondary);
         user-select: none;
+        transition: background-color 0.2s ease-out, border-color 0.2s ease-out, color 0.2s ease-out;
       }
 
       .tab-title {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
         color: var(--text-primary);
-        font-weight: 600;
+        font-weight: 500;
+        text-transform: none;
+        letter-spacing: normal;
+        font-size: 13px;
       }
 
       .tab-title i {
-        color: var(--accent);
+        color: var(--text-muted);
       }
 
       .header-actions {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 4px;
       }
 
       .stdin-section {
         height: 40%;
         display: flex;
         flex-direction: column;
-        background-color: var(--bg-main);
+        background-color: transparent;
         min-height: 80px;
       }
 
@@ -343,7 +400,7 @@
         flex: 1;
         display: flex;
         flex-direction: column;
-        background-color: var(--bg-main);
+        background-color: transparent;
         min-height: 80px;
         border-top: 1px solid var(--border);
       }
@@ -356,31 +413,41 @@
         overflow: hidden;
       }
 
-      /* Textareas & Terminal formatting */
+      /* Inputs & Terminal Outputs */
       .stdin-textarea {
         flex: 1;
-        width: 100%;
-        background-color: var(--bg-panel);
+        background-color: rgba(255, 255, 255, 0.01);
         color: var(--text-primary);
-        border: none;
-        padding: 16px;
-        font-family: "JetBrains Mono", "Consolas", monospace;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        margin: 12px 16px;
+        width: calc(100% - 32px);
+        padding: 12px;
+        font-family: "JetBrains Mono", monospace;
         font-size: 13px;
-        line-height: 1.6;
+        line-height: 1.5;
         resize: none;
         outline: none;
-        transition: background-color 0.2s;
+        transition: all 0.15s ease-out;
+      }
+
+      body.light-mode .stdin-textarea {
+        background-color: #ffffff;
       }
 
       .stdin-textarea:focus {
-        background-color: var(--bg-active);
+        background-color: rgba(255, 255, 255, 0.02);
+        border-color: var(--accent);
+      }
+
+      body.light-mode .stdin-textarea:focus {
+        background-color: #ffffff;
       }
 
       .output-content {
         flex: 1;
         padding: 16px;
         overflow-y: auto;
-        background-color: var(--bg-main);
         display: flex;
         flex-direction: column;
         gap: 12px;
@@ -388,18 +455,26 @@
 
       .output-pre {
         margin: 0;
-        padding: 0;
-        font-family: "JetBrains Mono", "Consolas", monospace;
+        background-color: rgba(255, 255, 255, 0.01);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 12px 16px;
+        font-family: "JetBrains Mono", monospace;
         font-size: 13px;
         line-height: 1.6;
         white-space: pre-wrap;
         word-break: break-all;
         color: var(--text-primary);
+        transition: all 0.2s ease-out;
+      }
+
+      body.light-mode .output-pre {
+        background-color: #ffffff;
       }
 
       .placeholder-text {
         color: var(--text-muted);
-        font-family: "Plus Jakarta Sans", sans-serif;
+        font-family: "Inter", sans-serif;
         font-size: 13px;
         display: flex;
         align-items: center;
@@ -411,84 +486,93 @@
       }
 
       .stderr-box {
-        background-color: rgba(239, 68, 68, 0.04);
-        border: 1px dashed rgba(239, 68, 68, 0.2);
-        border-left: 4px solid var(--error);
+        background-color: rgba(239, 68, 68, 0.01);
+        border: 1px solid rgba(239, 68, 68, 0.15);
+        border-left: 3px solid var(--error);
         padding: 12px 16px;
         border-radius: 6px;
-        color: #fca5a5;
-        font-family: "JetBrains Mono", "Consolas", monospace;
+        color: var(--error);
+        font-family: "JetBrains Mono", monospace;
         font-size: 13px;
         line-height: 1.5;
         white-space: pre-wrap;
         word-break: break-all;
+        transition: all 0.2s ease-out;
+      }
+
+      body.light-mode .stderr-box {
+        background-color: #fffefd;
       }
 
       .stderr-header {
-        font-weight: 700;
+        font-weight: 600;
         margin-bottom: 6px;
         color: var(--error);
         display: flex;
         align-items: center;
         gap: 6px;
-        font-size: 12px;
+        font-size: 11px;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.05em;
       }
 
       /* Badges & Statistics */
       .status-badge {
-        font-size: 10px;
-        font-weight: 700;
-        letter-spacing: 0.5px;
-        padding: 3px 10px;
-        border-radius: 9999px;
+        font-size: 9px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        padding: 2px 8px;
+        border-radius: 4px;
         text-transform: uppercase;
+        margin-left: 8px;
       }
 
       .status-queued {
-        background-color: rgba(245, 158, 11, 0.1);
+        background-color: rgba(245, 158, 11, 0.05);
         color: var(--warning);
-        border: 1px solid rgba(245, 158, 11, 0.2);
-        animation: pulse-yellow 2s infinite;
+        border: 1px solid rgba(245, 158, 11, 0.15);
       }
 
       .status-running {
-        background-color: rgba(99, 102, 241, 0.1);
+        background-color: rgba(79, 70, 229, 0.05);
         color: var(--accent);
-        border: 1px solid rgba(99, 102, 241, 0.2);
-        animation: pulse-blue 2s infinite;
+        border: 1px solid rgba(79, 70, 229, 0.15);
       }
 
       .status-completed {
-        background-color: rgba(16, 185, 129, 0.1);
+        background-color: rgba(16, 185, 129, 0.05);
         color: var(--success);
-        border: 1px solid rgba(16, 185, 129, 0.2);
+        border: 1px solid rgba(16, 185, 129, 0.15);
       }
 
       .status-error {
-        background-color: rgba(239, 68, 68, 0.1);
+        background-color: rgba(239, 68, 68, 0.05);
         color: var(--error);
-        border: 1px solid rgba(239, 68, 68, 0.2);
+        border: 1px solid rgba(239, 68, 68, 0.15);
       }
 
       .status-timeout {
-        background-color: rgba(245, 158, 11, 0.1);
+        background-color: rgba(245, 158, 11, 0.05);
         color: var(--warning);
-        border: 1px solid rgba(245, 158, 11, 0.2);
+        border: 1px solid rgba(245, 158, 11, 0.15);
       }
 
       .meta-info {
         font-size: 11px;
-        color: var(--text-muted);
-        background-color: var(--bg-panel);
+        color: var(--text-secondary);
+        background-color: rgba(255, 255, 255, 0.02);
         padding: 2px 8px;
         border-radius: 4px;
         border: 1px solid var(--border);
         font-family: "JetBrains Mono", monospace;
+        transition: all 0.2s ease-out;
       }
 
-      /* Settings sidebar drawer */
+      body.light-mode .meta-info {
+        background-color: #ffffff;
+      }
+
+      /* Settings Drawer */
       .settings-sidebar {
         position: fixed;
         top: 0;
@@ -497,9 +581,9 @@
         height: 100vh;
         background-color: var(--bg-panel);
         border-left: 1px solid var(--border);
-        box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+        box-shadow: -8px 0 24px rgba(0, 0, 0, 0.2);
         z-index: 100;
-        transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: right 0.25s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease-out, border-color 0.2s ease-out;
         display: flex;
         flex-direction: column;
         padding: 24px;
@@ -519,8 +603,9 @@
       }
 
       .sidebar-title {
-        font-weight: 700;
-        font-size: 18px;
+        font-weight: 600;
+        font-size: 15px;
+        color: var(--text-primary);
       }
 
       .sidebar-overlay {
@@ -529,12 +614,11 @@
         left: 0;
         width: 100vw;
         height: 100vh;
-        background: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(4px);
+        background: rgba(0, 0, 0, 0.4);
         z-index: 90;
         opacity: 0;
         pointer-events: none;
-        transition: opacity 0.3s;
+        transition: opacity 0.2s ease-out;
       }
 
       .sidebar-overlay.open {
@@ -545,7 +629,7 @@
       .setting-item {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
         margin-bottom: 24px;
       }
 
@@ -558,22 +642,22 @@
 
       .setting-label {
         font-size: 13px;
-        font-weight: 600;
+        font-weight: 500;
         color: var(--text-primary);
       }
 
       .setting-desc {
         font-size: 11px;
         color: var(--text-secondary);
-        margin-top: -4px;
+        margin-top: -2px;
       }
 
-      /* Switch (Toggle button) */
+      /* Switch */
       .switch {
         position: relative;
         display: inline-block;
-        width: 44px;
-        height: 22px;
+        width: 38px;
+        height: 20px;
       }
 
       .switch input {
@@ -589,32 +673,39 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background-color: var(--border);
-        transition: 0.2s;
-        border-radius: 22px;
+        background-color: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border);
+        transition: 0.2s ease-out;
+        border-radius: 20px;
+      }
+
+      body.light-mode .slider {
+        background-color: rgba(0, 0, 0, 0.05);
       }
 
       .slider:before {
         position: absolute;
         content: "";
-        height: 16px;
-        width: 16px;
+        height: 12px;
+        width: 12px;
         left: 3px;
         bottom: 3px;
-        background-color: white;
-        transition: 0.2s;
+        background-color: var(--text-secondary);
+        transition: 0.2s ease-out;
         border-radius: 50%;
       }
 
       input:checked + .slider {
         background-color: var(--accent);
+        border-color: var(--accent);
       }
 
       input:checked + .slider:before {
-        transform: translateX(22px);
+        transform: translateX(18px);
+        background-color: white;
       }
 
-      /* Toast notification styles */
+      /* Toasts floating system */
       .toast-container {
         position: fixed;
         bottom: 24px;
@@ -629,20 +720,19 @@
       .toast {
         background-color: var(--bg-header);
         border: 1px solid var(--border);
-        border-left: 4px solid var(--accent);
         color: var(--text-primary);
-        padding: 12px 20px;
-        border-radius: 8px;
+        padding: 10px 16px;
+        border-radius: 6px;
         font-size: 13px;
         font-weight: 500;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         display: flex;
         align-items: center;
-        gap: 12px;
-        transform: translateY(20px);
+        gap: 10px;
+        transform: translateY(10px);
         opacity: 0;
         pointer-events: auto;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease-out, border-color 0.2s ease-out;
       }
 
       .toast.show {
@@ -650,20 +740,24 @@
         opacity: 1;
       }
 
-      .toast.success {
-        border-left-color: var(--success);
+      .toast::before {
+        content: '';
+        width: 4px;
+        height: 16px;
+        border-radius: 2px;
+        background-color: var(--accent);
       }
 
-      .toast.error {
-        border-left-color: var(--error);
+      .toast.success::before {
+        background-color: var(--success);
       }
 
-      .toast.info {
-        border-left-color: var(--accent);
+      .toast.error::before {
+        background-color: var(--error);
       }
 
       .spinner {
-        animation: spin 1s linear infinite;
+        animation: spin 0.8s linear infinite;
       }
 
       @keyframes spin {
@@ -672,69 +766,43 @@
         }
       }
 
-      @keyframes pulse-yellow {
-        0% {
-          box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.3);
-        }
-        70% {
-          box-shadow: 0 0 0 8px rgba(245, 158, 11, 0);
-        }
-        100% {
-          box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
-        }
-      }
-
-      @keyframes pulse-blue {
-        0% {
-          box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.3);
-        }
-        70% {
-          box-shadow: 0 0 0 8px rgba(99, 102, 241, 0);
-        }
-        100% {
-          box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
-        }
-      }
-
-      /* Custom scrollbars */
+      /* Thin scrollbars */
       ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
+        width: 6px;
+        height: 6px;
       }
 
       ::-webkit-scrollbar-track {
-        background: var(--bg-main);
+        background: transparent;
       }
 
       ::-webkit-scrollbar-thumb {
-        background: var(--border);
-        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 10px;
+      }
+
+      body.light-mode ::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.05);
       }
 
       ::-webkit-scrollbar-thumb:hover {
-        background: var(--border-glow);
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      body.light-mode ::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.12);
       }
     </style>
   </head>
   <body>
-    <!-- SVG Logo Gradient Definitions -->
-    <svg style="width: 0; height: 0; position: absolute">
-      <defs>
-        <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#a855f7" />
-          <stop offset="100%" stop-color="#6366f1" />
-        </linearGradient>
-      </defs>
-    </svg>
-
-    <!-- Top Navigation Bar -->
+    <!-- Floating Header -->
     <div class="navbar">
       <div class="logo-area">
         <div class="logo-icon">
-          <i data-lucide="terminal" style="width: 18px; height: 18px"></i>
+          <i data-lucide="terminal" style="width: 14px; height: 14px"></i>
         </div>
         <span class="logo-text">CodeEngine</span>
-        <span class="logo-badge">IDE</span>
+        <span class="logo-badge">Beta</span>
       </div>
 
       <div class="nav-controls">
@@ -744,8 +812,18 @@
         </select>
 
         <button id="runBtn" class="btn btn-primary" onclick="submitCode()">
-          <i data-lucide="play" id="runIcon" style="width: 14px; height: 14px"></i>
+          <i data-lucide="play" id="runIcon" style="width: 13px; height: 13px"></i>
           <span id="runText">Run Code</span>
+        </button>
+
+        <!-- Dynamic Dark/Light mode Toggle Button -->
+        <button
+          id="themeToggleBtn"
+          class="icon-btn"
+          onclick="toggleTheme()"
+          title="Toggle Theme"
+        >
+          <i data-lucide="sun" id="themeIcon"></i>
         </button>
 
         <button
@@ -753,21 +831,21 @@
           onclick="toggleSettings()"
           title="IDE Settings"
         >
-          <i data-lucide="settings"></i>
+          <i data-lucide="sliders-horizontal"></i>
         </button>
       </div>
     </div>
 
-    <!-- Workspace container -->
+    <!-- Main Workspace splits -->
     <div class="workspace">
       <!-- Left side: Code Editor -->
-      <div class="editor-pane">
+      <div class="editor-pane" id="editorPane">
         <div class="pane-header">
           <div class="tab-title">
             <i
               data-lucide="file-code"
               id="fileTabIcon"
-              style="width: 14px; height: 14px"
+              style="width: 13px; height: 13px"
             ></i>
             <span>main.</span><span id="extLabel">py</span>
           </div>
@@ -810,7 +888,7 @@
         <div id="codeEditorContainer"></div>
       </div>
 
-      <!-- Drag handle (Vertical) -->
+      <!-- Drag separator vertical -->
       <div class="resizer-v"></div>
 
       <!-- Right side: I/O controls -->
@@ -819,7 +897,7 @@
         <div class="stdin-section">
           <div class="pane-header">
             <div class="tab-title">
-              <i data-lucide="text-input" style="width: 14px; height: 14px"></i>
+              <i data-lucide="text-cursor-input" style="width: 13px; height: 13px"></i>
               <span>Standard Input</span>
             </div>
             <div class="header-actions">
@@ -836,19 +914,19 @@
             id="stdinEditor"
             class="stdin-textarea"
             spellcheck="false"
-            placeholder="Provide standard inputs for your code execution here (optional)..."
+            placeholder="System standard input contents..."
           ></textarea>
         </div>
 
-        <!-- Drag handle (Horizontal) -->
+        <!-- Drag separator horizontal -->
         <div class="resizer-h"></div>
 
         <!-- Output section -->
         <div class="stdout-section">
           <div class="pane-header">
             <div class="tab-title">
-              <i data-lucide="terminal" style="width: 14px; height: 14px"></i>
-              <span>Output</span>
+              <i data-lucide="terminal" style="width: 13px; height: 13px"></i>
+              <span>Console Output</span>
               <span
                 id="statusBadge"
                 class="status-badge"
@@ -877,19 +955,19 @@
           </div>
           <div id="outputContent" class="output-content">
             <div class="placeholder-text" id="outputPlaceholder">
-              <i data-lucide="cpu" style="width: 28px; height: 28px"></i>
-              <span>Execute your code to observe compilation & output here.</span>
+              <i data-lucide="terminal" style="width: 20px; height: 20px"></i>
+              <span>Output streams will be rendered here.</span>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Settings Sidebar Panel -->
+    <!-- Settings Sidebar Drawer -->
     <div class="sidebar-overlay" onclick="toggleSettings()"></div>
     <div class="settings-sidebar" id="settingsSidebar">
       <div class="sidebar-header">
-        <div class="sidebar-title">IDE Settings</div>
+        <div class="sidebar-title">Preferences</div>
         <button class="icon-btn" onclick="toggleSettings()">
           <i data-lucide="x"></i>
         </button>
@@ -897,19 +975,19 @@
 
       <div class="setting-item">
         <div class="setting-label">Font Size</div>
-        <div class="setting-desc">Adjust the code editor display font size</div>
+        <div class="setting-desc">Adjust the code font display size</div>
         <select id="settingFontSize" class="styled-select">
           <option value="12">12px</option>
+          <option value="13">13px</option>
           <option value="14" selected>14px</option>
+          <option value="15">15px</option>
           <option value="16">16px</option>
-          <option value="18">18px</option>
-          <option value="20">20px</option>
         </select>
       </div>
 
       <div class="setting-item">
         <div class="setting-label">Tab Size</div>
-        <div class="setting-desc">Specify tab indentation spaces</div>
+        <div class="setting-desc">Configure code indent spacing width</div>
         <select id="settingTabSize" class="styled-select">
           <option value="2">2 spaces</option>
           <option value="4" selected>4 spaces</option>
@@ -931,7 +1009,7 @@
       <div class="setting-row">
         <div>
           <div class="setting-label">Minimap</div>
-          <div class="setting-desc">Show sidebar minimap layout preview</div>
+          <div class="setting-desc">Show editor code map outline</div>
         </div>
         <label class="switch">
           <input type="checkbox" id="settingMinimap" checked />
@@ -940,7 +1018,7 @@
       </div>
     </div>
 
-    <!-- Hidden input file loader -->
+    <!-- Hidden upload element -->
     <input
       type="file"
       id="fileInput"
@@ -948,13 +1026,13 @@
       onchange="handleFileUpload(event)"
     />
 
-    <!-- Toast Notification Container -->
+    <!-- Toasts floating list -->
     <div class="toast-container" id="toastContainer"></div>
 
     <script>
-      const API_BASE = "http://localhost"; // Connection endpoint through NGINX
+      const API_BASE = "http://localhost"; // Docker endpoint route
 
-      // Core Boilerplate templates configuration
+      // Languages Templates Boilerplates
       const TEMPLATES = {
         python: `# Online Python Compiler (IntelliSense Enabled)
 import sys
@@ -988,10 +1066,20 @@ int main() {
 
       let editor = null;
 
-      // Initialize Lucide Icons initially
+      // Initialize Theme preference before rendering icons to ensure correct load
+      const savedTheme = localStorage.getItem("ide-theme") || "dark";
+      const isLight = savedTheme === "light";
+      if (isLight) {
+        document.body.classList.add("light-mode");
+        document.getElementById("themeIcon").setAttribute("data-lucide", "moon");
+      } else {
+        document.getElementById("themeIcon").setAttribute("data-lucide", "sun");
+      }
+
+      // Initialize Lucide Icons
       lucide.createIcons();
 
-      // Retrieve state from localstorage helper
+      // Cache controls
       function getSavedCode(lang) {
         const saved = localStorage.getItem(`code_${lang}`);
         return saved !== null ? saved : TEMPLATES[lang];
@@ -1008,44 +1096,78 @@ int main() {
         },
       });
       require(["vs/editor/editor.main"], function () {
-        // Define Custom Dark theme matching the UI theme variables
-        monaco.editor.defineTheme("ide-dark", {
+        // High-contrast deep slate SaaS layout theme
+        monaco.editor.defineTheme("saas-dark", {
           base: "vs-dark",
           inherit: true,
           rules: [
-            { token: "comment", foreground: "5e6675", fontStyle: "italic" },
-            { token: "keyword", foreground: "c678dd" },
-            { token: "string", foreground: "98c379" },
-            { token: "number", foreground: "d19a66" },
-            { token: "regexp", foreground: "e5c07b" },
-            { token: "type", foreground: "e5c07b" },
-            { token: "class", foreground: "e5c07b" },
-            { token: "function", foreground: "61afef" },
-            { token: "variable", foreground: "abb2bf" },
+            { token: "comment", foreground: "52525b", fontStyle: "italic" },
+            { token: "keyword", foreground: "a5b4fc" },
+            { token: "string", foreground: "a7f3d0" },
+            { token: "number", foreground: "fde047" },
+            { token: "regexp", foreground: "fda4af" },
+            { token: "type", foreground: "93c5fd" },
+            { token: "class", foreground: "93c5fd" },
+            { token: "function", foreground: "38bdf8" },
+            { token: "variable", foreground: "fafafa" },
           ],
           colors: {
-            "editor.background": "#111318",
-            "editor.foreground": "#f3f4f6",
-            "editor.lineHighlightBackground": "#1e222b",
-            "editorLineNumber.foreground": "#5e6675",
-            "editorLineNumber.activeForeground": "#6366f1",
-            "editor.selectionBackground": "#262b35",
-            "editor.inactiveSelectionBackground": "#262b35",
-            "editorWidget.background": "#171a21",
-            "editorWidget.border": "#262b35",
-            "input.background": "#111318",
-            "input.foreground": "#f3f4f6",
-            "input.border": "#262b35",
-            "dropdown.background": "#111318",
-            "dropdown.foreground": "#f3f4f6",
-            "dropdown.border": "#262b35",
+            "editor.background": "#0a0a0d",
+            "editor.foreground": "#f4f4f5",
+            "editor.lineHighlightBackground": "#111115",
+            "editorLineNumber.foreground": "#3f3f46",
+            "editorLineNumber.activeForeground": "#a1a1aa",
+            "editor.selectionBackground": "rgba(255, 255, 255, 0.04)",
+            "editor.inactiveSelectionBackground": "rgba(255, 255, 255, 0.02)",
+            "editorWidget.background": "#0e0e12",
+            "editorWidget.border": "#181822",
+            "input.background": "#060608",
+            "input.foreground": "#f4f4f5",
+            "input.border": "#181822",
+            "dropdown.background": "#0a0a0d",
+            "dropdown.foreground": "#f4f4f5",
+            "dropdown.border": "#181822",
+          },
+        });
+
+        // Clean light layout theme
+        monaco.editor.defineTheme("saas-light", {
+          base: "vs",
+          inherit: true,
+          rules: [
+            { token: "comment", foreground: "71717a", fontStyle: "italic" },
+            { token: "keyword", foreground: "4f46e5" },
+            { token: "string", foreground: "059669" },
+            { token: "number", foreground: "d97706" },
+            { token: "regexp", foreground: "e11d48" },
+            { token: "type", foreground: "2563eb" },
+            { token: "class", foreground: "2563eb" },
+            { token: "function", foreground: "0284c7" },
+            { token: "variable", foreground: "09090b" },
+          ],
+          colors: {
+            "editor.background": "#ffffff",
+            "editor.foreground": "#09090b",
+            "editor.lineHighlightBackground": "#f4f4f5",
+            "editorLineNumber.foreground": "#a1a1aa",
+            "editorLineNumber.activeForeground": "#71717a",
+            "editor.selectionBackground": "rgba(79, 70, 229, 0.08)",
+            "editor.inactiveSelectionBackground": "rgba(79, 70, 229, 0.04)",
+            "editorWidget.background": "#f4f4f5",
+            "editorWidget.border": "#e4e4e7",
+            "input.background": "#ffffff",
+            "input.foreground": "#09090b",
+            "input.border": "#e4e4e7",
+            "dropdown.background": "#ffffff",
+            "dropdown.foreground": "#09090b",
+            "dropdown.border": "#e4e4e7",
           },
         });
 
         const initialLanguage = document.getElementById("language").value;
         const savedCode = getSavedCode(initialLanguage);
 
-        // Load settings from localStorage
+        // Load configs
         const fontSize = parseInt(
           localStorage.getItem("ide-font-size") || "14",
         );
@@ -1060,7 +1182,7 @@ int main() {
           {
             value: savedCode,
             language: initialLanguage === "cpp" ? "cpp" : "python",
-            theme: "ide-dark",
+            theme: isLight ? "saas-light" : "saas-dark",
             fontSize: fontSize,
             tabSize: tabSize,
             wordWrap: wordWrap,
@@ -1075,14 +1197,14 @@ int main() {
           },
         );
 
-        // Register content listener to auto save code draft
+        // Save on edits
         editor.onDidChangeModelContent(() => {
           const code = editor.getValue();
           const lang = document.getElementById("language").value;
           saveCode(lang, code);
         });
 
-        // Update settings form visual states to match current config
+        // Set control elements states
         document.getElementById("settingFontSize").value = fontSize.toString();
         document.getElementById("settingTabSize").value = tabSize.toString();
         document.getElementById("settingWordWrap").checked =
@@ -1090,7 +1212,28 @@ int main() {
         document.getElementById("settingMinimap").checked = minimap;
       });
 
-      // Handle Language Selector changes
+      // Toggle Light/Dark mode
+      function toggleTheme() {
+        const body = document.body;
+        const isL = body.classList.toggle("light-mode");
+        localStorage.setItem("ide-theme", isL ? "light" : "dark");
+
+        const icon = document.getElementById("themeIcon");
+        if (isL) {
+          icon.setAttribute("data-lucide", "moon");
+        } else {
+          icon.setAttribute("data-lucide", "sun");
+        }
+        lucide.createIcons();
+
+        if (editor) {
+          monaco.editor.setTheme(isL ? "saas-light" : "saas-dark");
+        }
+
+        showToast(`Switched to ${isL ? "Light" : "Dark"} theme`, "info");
+      }
+
+      // Handle language updates
       document
         .getElementById("language")
         .addEventListener("change", function (e) {
@@ -1098,14 +1241,10 @@ int main() {
           const prevLang = newLang === "python" ? "cpp" : "python";
 
           if (editor) {
-            // Save active code state to memory
             saveCode(prevLang, editor.getValue());
-
-            // Retrieve previously cached code or templates
             const code = getSavedCode(newLang);
             editor.setValue(code);
 
-            // Change syntax highlight parser engine
             const model = editor.getModel();
             monaco.editor.setModelLanguage(
               model,
@@ -1113,7 +1252,6 @@ int main() {
             );
           }
 
-          // Update extensions UI element
           document.getElementById("extLabel").innerText =
             newLang === "python" ? "py" : "cpp";
           document.getElementById("fileTabIcon").setAttribute(
@@ -1123,7 +1261,7 @@ int main() {
           lucide.createIcons();
         });
 
-      // Settings UI Drawer visibility toggle
+      // Sidebar settings toggler
       function toggleSettings() {
         const sidebar = document.getElementById("settingsSidebar");
         const overlay = document.querySelector(".sidebar-overlay");
@@ -1131,7 +1269,7 @@ int main() {
         overlay.classList.toggle("open");
       }
 
-      // Settings Form Listeners & handlers
+      // Settings controllers
       document
         .getElementById("settingFontSize")
         .addEventListener("change", function (e) {
@@ -1172,7 +1310,7 @@ int main() {
           }
         });
 
-      // Split panels Drag and drop resize handles
+      // Drag panel resizing controls
       const workspace = document.querySelector(".workspace");
       const editorPane = document.querySelector(".editor-pane");
       const ioPane = document.querySelector(".io-pane");
@@ -1183,7 +1321,6 @@ int main() {
       let isDraggingV = false;
       let isDraggingH = false;
 
-      // Vertical Split Resizing
       resizerV.addEventListener("mousedown", (e) => {
         isDraggingV = true;
         resizerV.classList.add("dragging");
@@ -1191,7 +1328,6 @@ int main() {
         document.body.style.userSelect = "none";
       });
 
-      // Horizontal Split Resizing
       resizerH.addEventListener("mousedown", (e) => {
         isDraggingH = true;
         resizerH.classList.add("dragging");
@@ -1236,7 +1372,6 @@ int main() {
         document.body.style.userSelect = "auto";
       });
 
-      // Reset split sizes on double click
       resizerV.addEventListener("dblclick", () => {
         editorPane.style.width = "65%";
         ioPane.style.width = "35%";
@@ -1247,17 +1382,15 @@ int main() {
         stdinSection.style.height = "40%";
       });
 
-      // Copy code function
+      // Actions details
       function copyCode() {
         if (!editor) return;
-        const code = editor.getValue();
         navigator.clipboard
-          .writeText(code)
-          .then(() => showToast("Code copied to clipboard!", "success"))
-          .catch((err) => showToast("Failed to copy code.", "error"));
+          .writeText(editor.getValue())
+          .then(() => showToast("Copied code to clipboard", "success"))
+          .catch(() => showToast("Failed to copy code", "error"));
       }
 
-      // Download file function
       function downloadCode() {
         if (!editor) return;
         const code = editor.getValue();
@@ -1270,10 +1403,9 @@ int main() {
         a.download = `main.${ext}`;
         a.click();
         URL.revokeObjectURL(url);
-        showToast("Code downloaded successfully!", "success");
+        showToast("Downloaded file successfully", "success");
       }
 
-      // Trigger hidden input upload
       function triggerUpload() {
         document.getElementById("fileInput").click();
       }
@@ -1286,30 +1418,28 @@ int main() {
         reader.onload = function (evt) {
           if (editor) {
             editor.setValue(evt.target.result);
-            showToast(`Loaded "${file.name}" successfully.`, "info");
+            showToast(`Imported ${file.name}`, "info");
           }
         };
         reader.readAsText(file);
-        e.target.value = ""; // Clear file selector
+        e.target.value = "";
       }
 
-      // Reset to template
       function resetCode() {
         const lang = document.getElementById("language").value;
         if (
           confirm(
-            "Are you sure you want to reset the editor? Your current changes for this language will be lost.",
+            "Are you sure you want to reset the editor? Your active draft will be replaced.",
           )
         ) {
           if (editor) {
             editor.setValue(TEMPLATES[lang]);
             saveCode(lang, TEMPLATES[lang]);
-            showToast("Editor reset to boilerplate.", "info");
+            showToast("Reset code draft to boilerplate", "info");
           }
         }
       }
 
-      // Fullscreen mode support
       function toggleFullscreen() {
         const workspaceEl = document.querySelector(".workspace");
         const fsIcon = document.getElementById("fsIcon");
@@ -1318,7 +1448,7 @@ int main() {
           workspaceEl.requestFullscreen().then(() => {
             fsIcon.setAttribute("data-lucide", "minimize-2");
             lucide.createIcons();
-            showToast("Entered fullscreen mode.", "info");
+            showToast("Entered fullscreen mode", "info");
           });
         } else {
           document.exitFullscreen().then(() => {
@@ -1328,25 +1458,24 @@ int main() {
         }
       }
 
-      // Resize listener for Monaco when browser fullscreens
       document.addEventListener("fullscreenchange", () => {
         if (editor) {
           setTimeout(() => editor.layout(), 100);
         }
       });
 
-      // Clear helper functions
       function clearStdin() {
         document.getElementById("stdinEditor").value = "";
-        showToast("Standard input cleared.", "info");
+        showToast("Standard input cleared", "info");
       }
 
+      // Clear helper functions
       function clearOutput() {
         const out = document.getElementById("outputContent");
         out.innerHTML = `
           <div class="placeholder-text" id="outputPlaceholder">
-            <i data-lucide="cpu" style="width: 28px; height: 28px"></i>
-            <span>Execute your code to observe compilation & output here.</span>
+            <i data-lucide="terminal" style="width: 20px; height: 20px"></i>
+            <span>Output streams will be rendered here.</span>
           </div>
         `;
         lucide.createIcons();
@@ -1355,7 +1484,7 @@ int main() {
         document.getElementById("copyOutputBtn").style.display = "none";
       }
 
-      // Keyboard Shortcut listener (Ctrl+Enter / Cmd+Enter to run)
+      // Shortcut listener
       document.addEventListener("keydown", function (e) {
         if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
           e.preventDefault();
@@ -1363,24 +1492,17 @@ int main() {
         }
       });
 
-      // Toast Notification Engine
+      // Toast Notification helper
       function showToast(message, type = "success") {
         const container = document.getElementById("toastContainer");
         const toast = document.createElement("div");
         toast.className = `toast ${type}`;
 
-        let iconName = "check-circle-2";
-        if (type === "error") iconName = "alert-circle";
-        if (type === "info") iconName = "info";
-
         toast.innerHTML = `
-          <i data-lucide="${iconName}" style="width: 16px; height: 16px;"></i>
           <span>${message}</span>
         `;
         container.appendChild(toast);
-        lucide.createIcons();
 
-        // Animation triggers
         setTimeout(() => toast.classList.add("show"), 10);
 
         setTimeout(() => {
@@ -1389,7 +1511,7 @@ int main() {
         }, 3000);
       }
 
-      // Submit execution to API
+      // Submit run
       async function submitCode() {
         if (!editor) return;
         const code = editor.getValue();
@@ -1399,11 +1521,10 @@ int main() {
         const outContent = document.getElementById("outputContent");
 
         if (!code.trim()) {
-          showToast("Please write some code before executing.", "error");
+          showToast("Please enter code before running", "error");
           return;
         }
 
-        // Lock UI components
         runBtn.disabled = true;
         const runText = document.getElementById("runText");
         const runIcon = document.getElementById("runIcon");
@@ -1412,12 +1533,12 @@ int main() {
         runIcon.classList.add("spinner");
         lucide.createIcons();
 
-        updateStatus("queued");
+        updateStatus("running");
 
         outContent.innerHTML = `
           <div class="placeholder-text">
-            <i data-lucide="loader-2" class="spinner" style="width:28px;height:28px;color:var(--warning)"></i>
-            <span>Submitting execution request to queue...</span>
+            <i data-lucide="loader-2" class="spinner" style="width:20px;height:20px;color:var(--text-muted)"></i>
+            <span style="margin-top: 8px;">Submitting execution script...</span>
           </div>
         `;
         lucide.createIcons();
@@ -1441,18 +1562,18 @@ int main() {
             <div class="stderr-box">
               <div class="stderr-header">
                 <i data-lucide="alert-triangle" style="width: 14px; height: 14px"></i>
-                <span>Network Failure</span>
+                <span>Execution Error</span>
               </div>
-              <span class="output-pre">Could not interface with API Gateway. Check container network configurations.</span>
+              <pre class="output-pre">Unable to communicate with the compilation microservices gateway.</pre>
             </div>
           `;
           lucide.createIcons();
-          showToast("Submission failed.", "error");
+          showToast("Connection failed", "error");
           resetButton();
         }
       }
 
-      // Poll execution statuses using EventSource stream
+      // Stream status pipeline
       async function pollStatus(id) {
         const outContent = document.getElementById("outputContent");
         const evtSource = new EventSource(`${API_BASE}/stream/${id}`);
@@ -1464,8 +1585,8 @@ int main() {
           if (data.status === "running") {
             outContent.innerHTML = `
               <div class="placeholder-text">
-                <i data-lucide="loader-2" class="spinner" style="width:28px;height:28px;color:var(--accent)"></i>
-                <span>Running compilation & environment sandboxes...</span>
+                <i data-lucide="loader-2" class="spinner" style="width:20px;height:20px;color:var(--text-muted)"></i>
+                <span style="margin-top: 8px;">Executing sandbox test operations...</span>
               </div>
             `;
             lucide.createIcons();
@@ -1482,41 +1603,38 @@ int main() {
             let hasOutput = false;
             let outputHTML = "";
 
-            // Render Output stdout
             if (data.stdout) {
               hasOutput = true;
               outputHTML += `<pre class="output-pre">${escapeHTML(data.stdout)}</pre>`;
             }
 
-            // Render execution warnings or timeouts
             if (data.status === "timeout") {
               hasOutput = true;
               outputHTML += `
                 <div class="stderr-box">
                   <div class="stderr-header">
-                    <i data-lucide="clock" style="width:14px;height:14px"></i>
-                    <span>Timeout Exceeded</span>
+                    <i data-lucide="clock" style="width:13px;height:13px"></i>
+                    <span>Timeout limit hit</span>
                   </div>
-                  <pre class="output-pre">Process killed: Execution time limit exceeded (7000ms).</pre>
+                  <pre class="output-pre">The process exceeded runtime sandbox limits (7000ms).</pre>
                 </div>
               `;
             } else if (data.status === "completed" && !data.stdout && !data.stderr) {
               outputHTML += `
                 <div class="placeholder-text">
-                  <i data-lucide="check" style="width:28px;height:28px;color:var(--success)"></i>
-                  <span>Program finished successfully with no standard outputs.</span>
+                  <i data-lucide="check-circle" style="width:20px;height:20px;color:var(--success)"></i>
+                  <span style="margin-top: 8px;">Process completed successfully with no returned output streams.</span>
                 </div>
               `;
             }
 
-            // Render stderr box if error output found
             if (data.stderr) {
               hasOutput = true;
               outputHTML += `
                 <div class="stderr-box">
                   <div class="stderr-header">
-                    <i data-lucide="alert-circle" style="width:14px;height:14px"></i>
-                    <span>Error Output (stderr)</span>
+                    <i data-lucide="alert-circle" style="width:13px;height:13px"></i>
+                    <span>Compilation & Standard Error logs</span>
                   </div>
                   <pre class="output-pre">${escapeHTML(data.stderr)}</pre>
                 </div>
@@ -1526,13 +1644,11 @@ int main() {
             outContent.innerHTML = outputHTML;
             lucide.createIcons();
 
-            // Toggle Copy Button visibility
             if (hasOutput && data.stdout) {
               document.getElementById("copyOutputBtn").style.display =
                 "inline-flex";
             }
 
-            // Show execution metrics
             if (data.execution_time_ms !== null) {
               const meta = document.getElementById("metaInfo");
               meta.innerText = `${data.execution_time_ms} ms`;
@@ -1540,9 +1656,9 @@ int main() {
             }
 
             if (data.status === "completed") {
-              showToast("Execution completed successfully!", "success");
+              showToast("Execution completed successfully", "success");
             } else {
-              showToast("Execution halted with errors.", "error");
+              showToast("Execution halted with exceptions", "error");
             }
           }
         };
@@ -1554,25 +1670,23 @@ int main() {
             <div class="stderr-box" style="margin-top: 10px;">
               <div class="stderr-header">
                 <i data-lucide="wifi-off" style="width: 14px; height: 14px"></i>
-                <span>Stream Disconnected</span>
+                <span>Runtime offline</span>
               </div>
-              <pre class="output-pre">The SSE pipeline connection terminated prematurely.</pre>
+              <pre class="output-pre">The stream pipe interface timed out unexpectedly.</pre>
             </div>
           `;
           lucide.createIcons();
-          showToast("SSE Stream disconnected.", "error");
+          showToast("Server link interrupted", "error");
         };
       }
 
-      // Update status badges visually
       function updateStatus(status) {
         const badge = document.getElementById("statusBadge");
         badge.style.display = "inline-block";
-        badge.innerText = status.toUpperCase();
+        badge.innerText = status;
         badge.className = `status-badge status-${status}`;
       }
 
-      // Reset run button visually
       function resetButton() {
         const btn = document.getElementById("runBtn");
         const icon = document.getElementById("runIcon");
@@ -1585,22 +1699,19 @@ int main() {
         lucide.createIcons();
       }
 
-      // Copy standard output text to clipboard
       function copyOutput() {
         const outputPres = document.querySelectorAll(
           "#outputContent .output-pre",
         );
         if (outputPres.length === 0) return;
 
-        // Extract text from the first pre (which represents stdout)
         const text = outputPres[0].innerText;
         navigator.clipboard
           .writeText(text)
-          .then(() => showToast("Output copied to clipboard!", "success"))
-          .catch(() => showToast("Failed to copy output.", "error"));
+          .then(() => showToast("Copied outputs to clipboard", "success"))
+          .catch(() => showToast("Failed to copy outputs", "error"));
       }
 
-      // Prevent XSS vulnerability injection
       function escapeHTML(str) {
         return str.replace(
           /[&<>'"]/g,
