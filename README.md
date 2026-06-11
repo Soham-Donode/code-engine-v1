@@ -22,8 +22,8 @@ CodeEngine is a lightweight, high-performance, and secure online code execution 
 Make sure you have the following installed on your system:
 *   [Docker Desktop](https://www.docker.com/products/docker-desktop)
 *   `git` (for downloading and updating the codebase)
-*   `bash` shell (standard on Linux & macOS)
-*   `curl` (for checking API gateway readiness)
+*   **macOS / Linux / WSL / Git Bash**: `bash` shell and `curl` (for checking API gateway readiness)
+*   **Windows CMD / PowerShell**: Windows 10/11 built-in command prompt or PowerShell
 
 ---
 
@@ -57,11 +57,11 @@ Before launching the services, you **must ensure Docker Desktop is open and acti
 
 ### Step 3: Run the Application 🚀
 
-Choose one of the two methods below to run the environment:
+Choose the section below corresponding to your operating system to launch the application using our automated setup scripts:
 
-#### Method A: Using Automated Scripts (Recommended)
+#### 🍎 macOS & 🐧 Linux
 
-We provide helper scripts that automate the lifecycle of compilation, container startup, health checking, and cleanup.
+We provide automated helper scripts (`start.sh` and `stop.sh`) to manage the services.
 
 ##### 1. Set File Permissions
 First, make both the start and stop scripts executable on your system:
@@ -75,13 +75,13 @@ Run the startup script from the root directory to spin up the entire application
 ./start.sh
 ```
 *   **What this does**:
-    1.  Compiles the Go binary and builds the required Docker images.
+    1.  Verifies Docker and the Docker daemon are running.
     2.  Spins up the services (`nginx`, `engine`, `redis`, `postgres`) in the background.
     3.  Polls the API gateway (`http://localhost/submit`) until it is online.
     4.  Opens `frontend/index.html` in your default browser.
 
 ##### 3. Stop Services
-To stop and clean up all running services, containers, and networks, run the stop script:
+To stop and clean up all running services, containers, and networks:
 ```bash
 ./stop.sh
 ```
@@ -90,7 +90,45 @@ To stop and clean up all running services, containers, and networks, run the sto
 
 ---
 
-#### Method B: Manual Commands
+#### 🪟 Windows (Command Prompt / PowerShell / Git Bash / WSL)
+
+We provide Windows-native batch scripts (`start.bat` and `stop.bat`) for CMD/PowerShell, and shell scripts for Git Bash/WSL.
+
+##### Option A: Native Command Prompt / PowerShell
+*   **Start Services**:
+    Double-click `start.bat` in File Explorer, or run:
+    ```cmd
+    start.bat
+    ```
+*   **Stop Services**:
+    Double-click `stop.bat` in File Explorer, or run:
+    ```cmd
+    stop.bat
+    ```
+
+##### Option B: Git Bash / WSL (Windows Subsystem for Linux)
+*   **Set File Permissions** (only needed once):
+    ```bash
+    chmod +x start.sh stop.sh
+    ```
+*   **Start Services**:
+    ```bash
+    ./start.sh
+    ```
+*   **Stop Services**:
+    ```bash
+    ./stop.sh
+    ```
+
+*   **What these scripts do**:
+    1.  Verify Docker and the Docker daemon are running.
+    2.  Spin up the services in the background using Docker Compose.
+    3.  Poll the API gateway until it is online (if `curl` is available).
+    4.  Open `frontend/index.html` in your default web browser.
+
+---
+
+#### 🛠️ Method B: Manual Commands (All Platforms)
 
 If you prefer to orchestrate and manage the infrastructure manually, use the commands below:
 
