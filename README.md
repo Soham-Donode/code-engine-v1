@@ -1,3 +1,6 @@
+
+<img width="1672" height="941" alt="project-banner" src="https://github.com/user-attachments/assets/50f36f87-09e1-4b5c-9850-dcb035e32732" />
+
 # CodeEngine 🚀
 
 ![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)
@@ -121,7 +124,10 @@ docker compose down
 ```
 
 ---
+## Preview 
+<img width="1426" height="829" alt="image" src="https://github.com/user-attachments/assets/26f15790-52d2-4043-9134-b225783373fd" />
 
+---
 ## 🏗️ System Architecture
 
 CodeEngine follows a decoupled, distributed architecture designed for safety, speed, and real-time execution feedback.
