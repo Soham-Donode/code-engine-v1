@@ -17,23 +17,56 @@ CodeEngine is a lightweight, high-performance, and secure online code execution 
 
 ### Prerequisites
 Make sure you have the following installed on your system:
-*   [Docker](https://www.docker.com/products/docker-desktop) (with Compose support enabled)
+*   [Docker Desktop](https://www.docker.com/products/docker-desktop)
+*   `git` (for downloading and updating the codebase)
 *   `bash` shell (standard on Linux & macOS)
 *   `curl` (for checking API gateway readiness)
 
 ---
 
-### Method 1: Using Automated Scripts (Recommended) 🚀
+### Step 1: Clone, Pull, and Open Project Folder 📁
+
+Open your terminal and run the following commands to download the repository (or pull latest changes) and open the folder:
+
+```bash
+# Clone the repository (if you do not have it locally yet)
+git clone https://github.com/Soham-Donode/code-engine-v1.git
+
+# Navigate into the project directory
+cd code-engine-v1
+
+# Pull the latest changes (if you already cloned the project earlier)
+git pull origin main
+```
+
+---
+
+### Step 2: Ensure Docker Desktop is Running 🐳
+
+Before launching the services, you **must ensure Docker Desktop is open and active** on your system:
+*   **Mac / Windows**: Open the **Docker Desktop** application from your Applications folder or system tray and wait for it to show a green "Running" status.
+*   **Linux**: Verify the Docker daemon is running by starting it in the terminal:
+    ```bash
+    sudo systemctl start docker
+    ```
+
+---
+
+### Step 3: Run the Application 🚀
+
+Choose one of the two methods below to run the environment:
+
+#### Method A: Using Automated Scripts (Recommended)
 
 We provide helper scripts that automate the lifecycle of compilation, container startup, health checking, and cleanup.
 
-#### 1. Set File Permissions
+##### 1. Set File Permissions
 First, make both the start and stop scripts executable on your system:
 ```bash
 chmod +x start.sh stop.sh
 ```
 
-#### 2. Start Services
+##### 2. Start Services
 Run the startup script from the root directory to spin up the entire application stack:
 ```bash
 ./start.sh
@@ -44,7 +77,7 @@ Run the startup script from the root directory to spin up the entire application
     3.  Polls the API gateway (`http://localhost/submit`) until it is online.
     4.  Opens `frontend/index.html` in your default browser.
 
-#### 3. Stop Services
+##### 3. Stop Services
 To stop and clean up all running services, containers, and networks, run the stop script:
 ```bash
 ./stop.sh
@@ -54,17 +87,17 @@ To stop and clean up all running services, containers, and networks, run the sto
 
 ---
 
-### Method 2: Manual Commands 🛠️
+#### Method B: Manual Commands
 
 If you prefer to orchestrate and manage the infrastructure manually, use the commands below:
 
-#### 1. Spin Up Services
+##### 1. Spin Up Services
 Build the container images and run them in background detached mode:
 ```bash
 docker compose up -d --build
 ```
 
-#### 2. Monitor Container Logs
+##### 2. Monitor Container Logs
 To stream logs from all running containers:
 ```bash
 docker compose logs -f
@@ -75,13 +108,13 @@ docker compose logs -f engine
 docker compose logs -f nginx
 ```
 
-#### 3. Open the Frontend
+##### 3. Open the Frontend
 Since the startup script is bypassed, manually double-click or run:
 ```bash
 open frontend/index.html
 ```
 
-#### 4. Tear Down Services
+##### 4. Tear Down Services
 To stop the services and release all network ports:
 ```bash
 docker compose down
