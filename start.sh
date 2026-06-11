@@ -18,7 +18,7 @@ for i in {1..10}; do
 done
 
 echo "🖥️ Opening IDE in default browser..."
-open frontend.html
+open frontend/index.html
 
 echo "🎉 Setup complete! All services are running in the background."
 echo "👉 View runtime logs:  docker compose logs -f"
