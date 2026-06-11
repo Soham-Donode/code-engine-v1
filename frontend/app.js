@@ -52,6 +52,17 @@ if (isLight) {
   document.getElementById("themeIcon").setAttribute("data-lucide", "sun");
 }
 
+// Synchronize initial language tab name and icon dynamically
+const initialLanguageForLabel = document.getElementById("language").value;
+document.getElementById("extLabel").innerText =
+  initialLanguageForLabel === "python" ? "py" : "cpp";
+document
+  .getElementById("fileTabIcon")
+  .setAttribute(
+    "data-lucide",
+    initialLanguageForLabel === "python" ? "file-code" : "file-code-2",
+  );
+
 // Initialize Lucide Icons
 lucide.createIcons();
 
