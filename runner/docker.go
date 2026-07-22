@@ -27,8 +27,12 @@ func ExecuteCode(language, code, input string, timeout time.Duration) (*Executio
 		// "-c" runs string as inline script
 		cmdArgs = []string{"python", "-c", code}
 
+	case "node", "javascript", "js":
+		image = "node:20-alpine"
+		cmdArgs = []string{"node", "-e", code}
+
 	case "cpp", "c++":
-		image = "gcc:13.2.0"
+		image = "frolvlad/alpine-gxx"
 		// echo the code into main.cpp using bash, compile it, and run it
 		runCommand := fmt.Sprintf(`cat << 'EOF' > /tmp/main.cpp
 %s

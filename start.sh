@@ -21,20 +21,37 @@ fi
 echo "🚀 Starting CodeEngine Docker services in background..."
 docker compose up -d --build
 
+echo "🧹 Cleaning up intermediate build layers..."
+# Removes temporary build-stage images left behind by multi-stage builds
+docker image prune -f >/dev/null 2>&1
+
 echo "⏳ Waiting for API gateway to initialize..."
-# Wait up to 10 seconds checking if Nginx responds to preflight submit requests
+gateway_ready=false
+# Wait up to 10 seconds checking if Nginx responds to preflight or basic health requests
 for i in {1..10}; do
-  if curl -s -o /dev/null -w "%{http_code}" http://localhost/submit -X OPTIONS | grep -q "204"; then
+  status_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/submit -X OPTIONS)
+  if [[ "$status_code" =~ ^(200|204|405)$ ]]; then
     echo "✓ CodeEngine API Gateway is online!"
+    gateway_ready=true
     break
   fi
   sleep 1
 done
 
+if [ "$gateway_ready" = false ]; then
+  echo "⚠️ Warning: Gateway taking longer than expected to respond. Proceeding anyway..."
+fi
+
 echo "🖥️ Opening IDE in default browser..."
 # Detect OS and open browser accordingly
 open_browser() {
   local target="frontend/index.html"
+
+  # Convert path to absolute path for better OS launcher compatibility
+  if [ -f "$target" ]; then
+    target="$DIR/$target"
+  fi
+
   if [[ "$OSTYPE" == "darwin"* ]]; then
     open "$target"
   elif [[ "$OSTYPE" == "linux-gnu"* ]]; then

@@ -1,20 +1,29 @@
-# 1. Use the official Go image
-FROM golang:1.25.3-alpine
+# --- STAGE 1: Build Stage ---
+FROM golang:1.25.3-alpine AS builder
 
-# Install Docker CLI so the engine can run Docker commands
-RUN apk add --no-cache docker-cli
-
-# 2. Set the working directory inside the container
 WORKDIR /app
 
-# 3. Copy all your Go files into the container
-COPY . .
-
-# 4. Download any required Go modules (like Gin and Redis)
+# Copy dependency files first for better layer caching
+COPY go.mod go.sum ./
 RUN go mod download
 
-# 5. Compile the Go application
-RUN go build -o engine .
+# Copy the rest of the source code
+COPY . .
 
-# 6. Run the compiled binary when the container boots
+# Build a static binary (CGO_ENABLED=0 removes dynamic library dependencies)
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o engine .
+
+
+# --- STAGE 2: Minimal Runtime Stage ---
+FROM alpine:latest
+
+# Install Docker CLI so your app can communicate with docker.sock
+RUN apk add --no-cache docker-cli ca-certificates
+
+WORKDIR /app
+
+# Copy ONLY the compiled binary from the builder stage
+COPY --from=builder /app/engine .
+
+# Run the compiled binary
 CMD ["./engine"]

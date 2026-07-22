@@ -14,4 +14,8 @@ fi
 echo "🛑 Stopping CodeEngine Docker services..."
 docker compose down
 
+echo "🧹 Cleaning up unused build cache..."
+docker image prune -f >/dev/null 2>&1
+
 echo "✅ All services stopped successfully!"
+echo "💡 Tip: To also remove database volumes and start completely fresh, run: docker compose down -v"

@@ -198,7 +198,7 @@ graph TD
 
     subgraph Sandbox [Container Isolation]
         DS[Host Docker Daemon]
-        SB[Isolated Containers: Python / GCC]
+        SB[Isolated Containers: Python / C++]
     end
 
     FE -->|1. Submit Code| NG
@@ -291,7 +291,7 @@ Interacts with the Docker daemon via the mounted socket to spin up isolated cont
     *   `--rm`: Removes the container automatically upon completion.
 *   **Supported Languages**:
     *   **Python**: Runs code inline using `python:3.10-alpine`.
-    *   **C++**: Compiles and executes code inside `gcc:13.2.0` via standard gcc compilation (`g++ -O0`).
+    *   **C++**: Compiles and executes code inside `frolvlad/alpine-gxx` via standard gcc compilation (`g++ -O0`).
 *   **Timeout Handler**: Enforces a strict 7-second time limit per run.
 
 ### 5. Datastore & Storage (`store/store.go`, `db/init.sql`)
