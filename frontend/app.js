@@ -1,5 +1,12 @@
 const API_BASE = "http://localhost"; // Docker endpoint route
 
+// Languages Configurations Map
+const LANG_MAP = {
+  python: { ext: "py", icon: "file-code", monaco: "python" },
+  cpp: { ext: "cpp", icon: "file-code-2", monaco: "cpp" },
+  javascript: { ext: "js", icon: "file-code-2", monaco: "javascript" }
+};
+
 // Languages Templates Boilerplates
 const TEMPLATES = {
   python: `# Online Python Compiler (IntelliSense Enabled)
@@ -30,10 +37,15 @@ int main() {
     
     return 0;
 }`,
+
+  javascript: `// Online JavaScript (Node.js) Compiler
+console.log("Hello from JavaScript / Node.js!");
+`,
 };
 
 let editor = null;
 let isProgrammaticChange = false;
+let currentLanguage = document.getElementById("language").value;
 
 function setEditorValue(val) {
   if (!editor) return;
@@ -54,14 +66,11 @@ if (isLight) {
 
 // Synchronize initial language tab name and icon dynamically
 const initialLanguageForLabel = document.getElementById("language").value;
-document.getElementById("extLabel").innerText =
-  initialLanguageForLabel === "python" ? "py" : "cpp";
+const initialLangConfig = LANG_MAP[initialLanguageForLabel] || LANG_MAP.cpp;
+document.getElementById("extLabel").innerText = initialLangConfig.ext;
 document
   .getElementById("fileTabIcon")
-  .setAttribute(
-    "data-lucide",
-    initialLanguageForLabel === "python" ? "file-code" : "file-code-2",
-  );
+  .setAttribute("data-lucide", initialLangConfig.icon);
 
 // Initialize Lucide Icons
 lucide.createIcons();
@@ -169,7 +178,7 @@ require(["vs/editor/editor.main"], function () {
     document.getElementById("codeEditorContainer"),
     {
       value: savedCode,
-      language: initialLanguage === "cpp" ? "cpp" : "python",
+      language: (LANG_MAP[initialLanguage] || LANG_MAP.cpp).monaco,
       theme: isLight ? "saas-light" : "saas-dark",
       fontSize: fontSize,
       tabSize: tabSize,
@@ -233,7 +242,8 @@ document
   .getElementById("language")
   .addEventListener("change", function (e) {
     const newLang = e.target.value;
-    const prevLang = newLang === "python" ? "cpp" : "python";
+    const prevLang = currentLanguage;
+    currentLanguage = newLang;
 
     if (editor) {
       saveCode(prevLang, editor.getValue());
@@ -241,20 +251,15 @@ document
       setEditorValue(code);
 
       const model = editor.getModel();
-      monaco.editor.setModelLanguage(
-        model,
-        newLang === "cpp" ? "cpp" : "python",
-      );
+      const monacoLang = (LANG_MAP[newLang] || LANG_MAP.cpp).monaco;
+      monaco.editor.setModelLanguage(model, monacoLang);
     }
 
-    document.getElementById("extLabel").innerText =
-      newLang === "python" ? "py" : "cpp";
+    const langConfig = LANG_MAP[newLang] || LANG_MAP.cpp;
+    document.getElementById("extLabel").innerText = langConfig.ext;
     document
       .getElementById("fileTabIcon")
-      .setAttribute(
-        "data-lucide",
-        newLang === "python" ? "file-code" : "file-code-2",
-      );
+      .setAttribute("data-lucide", langConfig.icon);
     lucide.createIcons();
     populateTemplateSelector();
   });
@@ -393,7 +398,7 @@ function downloadCode() {
   if (!editor) return;
   const code = editor.getValue();
   const lang = document.getElementById("language").value;
-  const ext = lang === "python" ? "py" : "cpp";
+  const ext = (LANG_MAP[lang] || LANG_MAP.cpp).ext;
   const blob = new Blob([code], { type: "text/plain;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
