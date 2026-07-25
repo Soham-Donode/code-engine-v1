@@ -11,6 +11,10 @@ services:
       - engine
 
   # --- YOUR GO BACKEND ---
+  # NOTE: The engine container communicates directly with the host Docker daemon via the mounted socket (/var/run/docker.sock).
+  # The host Docker daemon MUST have 'runsc' (gVisor) installed and registered in /etc/docker/daemon.json
+  # before spinning up untrusted code containers with --runtime=runsc.
+  # For local development without gVisor installed, set SANDBOX_RUNTIME=runc in your shell environment.
   engine:
     build: .
     # CHANGED: Use 'expose' instead of 'ports'. 
@@ -19,6 +23,7 @@ services:
       - "8080" 
     environment:
       - REDIS_URL=redis:6379
+      - SANDBOX_RUNTIME=${SANDBOX_RUNTIME:-runsc}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:

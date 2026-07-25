@@ -18,6 +18,29 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
+# Check sandbox runtime registration if targeting runsc
+TARGET_RUNTIME="${SANDBOX_RUNTIME:-runsc}"
+if [ "$TARGET_RUNTIME" = "runsc" ]; then
+  if ! docker info --format '{{json .Runtimes}}' 2>/dev/null | grep -i "runsc" >/dev/null 2>&1; then
+    echo "⚠️ Error: gVisor runtime ('runsc') is NOT registered with the Docker daemon."
+    echo ""
+    echo "👉 To install and register gVisor (runsc) on Linux (ARM64 / x86_64):"
+    echo "   (set -e"
+    echo "    ARCH=\$(uname -m)"
+    echo "    URL=https://storage.googleapis.com/gvisor/releases/release/latest/\${ARCH}"
+    echo "    wget \${URL}/runsc \${URL}/runsc.sha512"
+    echo "    sha512sum -c runsc.sha512"
+    echo "    chmod +x runsc && sudo mv runsc /usr/local/bin/"
+    echo "    sudo runsc install"
+    echo "    sudo systemctl restart docker)"
+    echo ""
+    echo "👉 For local development without gVisor, run with the default runc fallback:"
+    echo "   SANDBOX_RUNTIME=runc ./start.sh"
+    echo ""
+    exit 1
+  fi
+fi
+
 echo "🚀 Starting CodeEngine Docker services in background..."
 docker compose up -d --build
 

@@ -8,6 +8,7 @@
 ![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
 ![Nginx](https://img.shields.io/badge/Nginx-009639?style=for-the-badge&logo=nginx&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
@@ -24,6 +25,52 @@ Make sure you have the following installed on your system:
 *   `git` (for downloading and updating the codebase)
 *   **macOS / Linux / WSL / Git Bash**: `bash` shell and `curl` (for checking API gateway readiness)
 *   **Windows CMD / PowerShell**: Windows 10/11 built-in command prompt or PowerShell
+
+---
+
+### 🛡️ gVisor (`runsc`) Sandbox Security & Setup
+
+CodeEngine uses **gVisor (`runsc`)** as its sandbox container runtime for strong kernel-level isolation when running untrusted code.
+
+#### 1. Installing `runsc` on Linux / ARM64 / x86_64
+Run the following script to download the binary for your host architecture (ARM64 `aarch64` or x86_64 `x86_64`), verify its checksum, and register it with Docker:
+
+```bash
+(
+  set -e
+  ARCH=$(uname -m)
+  URL=https://storage.googleapis.com/gvisor/releases/release/latest/${ARCH}
+  wget ${URL}/runsc ${URL}/runsc.sha512
+  sha512sum -c runsc.sha512
+  chmod +x runsc
+  sudo mv runsc /usr/local/bin/
+  sudo runsc install
+  sudo systemctl restart docker
+)
+```
+
+#### 2. Registering with Docker (`/etc/docker/daemon.json`)
+Running `sudo runsc install` automatically updates `/etc/docker/daemon.json` to register the runtime:
+```json
+{
+    "runtimes": {
+        "runsc": {
+            "path": "/usr/local/bin/runsc"
+        }
+    }
+}
+```
+
+#### 3. Performance Trade-off & Syscall Overhead
+*   gVisor intercepts and handles Linux system calls in user space rather than passing them directly to the host kernel.
+*   This introduces a **~10–30% syscall performance overhead**, which is especially noticeable during compiler-heavy phases (such as `g++` invocation).
+*   Given CodeEngine's strict **7-second execution timeout**, this overhead is a highly acceptable security trade-off to prevent container escape and host kernel exploitation.
+
+#### 4. Local Development Fallback (`SANDBOX_RUNTIME=runc`)
+If you are developing locally on Docker Desktop without `runsc` registered in your daemon, override the sandbox runtime using the `SANDBOX_RUNTIME` environment variable:
+```bash
+SANDBOX_RUNTIME=runc ./start.sh
+```
 
 ---
 
@@ -198,7 +245,7 @@ graph TD
 
     subgraph Sandbox [Container Isolation]
         DS[Host Docker Daemon]
-        SB[Isolated Containers: Python / C++]
+        SB[Isolated Containers: Python / C++ / JavaScript]
     end
 
     FE -->|1. Submit Code| NG
@@ -281,17 +328,23 @@ Runs a Gin router and serves the execution flow:
 *   **API Router**:
     *   `POST /submit`: Ingests code/language payload, creates a temporary status in Redis, and pushes the job to the Redis Stream.
     *   `GET /stream/:id`: Delivers SSE events by polling Redis status every `500ms`. Automatically closes the stream on terminal states (`completed`, `error`, `timeout`).
+    *   **CORS Preflight**: Handles cross-origin requests and `OPTIONS` preflight checks seamlessly (returning 204 status).
 *   **Async Worker**: An asynchronous worker routine that polls the Redis Stream `code_queue` within a consumer group, processing one job at a time to distribute execution load.
 
 ### 4. Sandbox Runner (`runner/docker.go`)
 Interacts with the Docker daemon via the mounted socket to spin up isolated container instances:
-*   **Security Restrictions**:
+*   **Security Restrictions & Platform Support**:
+    *   `--runtime=runsc`: Uses gVisor user-space kernel isolation (configurable via `SANDBOX_RUNTIME` env var, defaulting to `runsc`).
     *   `--network none`: Isolated sandboxing prevents external network calls.
     *   `-m 256m`: Caps container memory usage to 256MB.
+    *   `--pids-limit 64`: Prevents fork bomb attacks inside the sandbox.
+    *   `--cap-drop ALL`: Drops all Linux kernel capabilities.
+    *   `--platform linux/arm64`: Native Apple Silicon (ARM64) and multi-architecture runtime support.
     *   `--rm`: Removes the container automatically upon completion.
-*   **Supported Languages**:
+*   **Supported Languages (Lightweight Alpine Runtimes)**:
     *   **Python**: Runs code inline using `python:3.10-alpine`.
     *   **C++**: Compiles and executes code inside `frolvlad/alpine-gxx` via standard gcc compilation (`g++ -O0`).
+    *   **JavaScript / Node.js**: Executes code inline using `node:20-alpine`.
 *   **Timeout Handler**: Enforces a strict 7-second time limit per run.
 
 ### 5. Datastore & Storage (`store/store.go`, `db/init.sql`)

@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -44,15 +45,24 @@ g++ -O0 /tmp/main.cpp -o /tmp/main && /tmp/main`, code)
 		return nil, fmt.Errorf("unsupported language engine: %s", language)
 	}
 
+	// Make sandbox runtime configurable via SANDBOX_RUNTIME env var (defaults to "runsc" for gVisor)
+	sandboxRuntime := os.Getenv("SANDBOX_RUNTIME")
+	if sandboxRuntime == "" {
+		sandboxRuntime = "runsc"
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), timeout+2*time.Second)
 	defer cancel()
 
 	// Base Docker sandbox architecture command array construction
 	dockerArgs := []string{
 		"run", "-i", "--rm", // -i is crucial to keep STDIN open
+		fmt.Sprintf("--runtime=%s", sandboxRuntime),
 		"--platform", "linux/arm64", // Native Apple Silicon support
 		"--network", "none",
 		"-m", "256m", // Increased to 256m since g++ requires slightly more memory during compilation
+		"--pids-limit", "64",
+		"--cap-drop", "ALL",
 		image,
 	}
 	dockerArgs = append(dockerArgs, cmdArgs...)
@@ -73,6 +83,17 @@ g++ -O0 /tmp/main.cpp -o /tmp/main && /tmp/main`, code)
 	var timedOut bool
 	if duration >= timeout || (ctx.Err() != nil && ctx.Err() == context.DeadlineExceeded) {
 		timedOut = true
+	}
+
+	if err != nil {
+		stderrStr := stderrBuf.String()
+		combinedErrStr := stderrStr + " " + err.Error()
+		if strings.Contains(combinedErrStr, "Unknown runtime") ||
+			strings.Contains(combinedErrStr, "unknown runtime") ||
+			strings.Contains(combinedErrStr, "daemon without runsc") ||
+			strings.Contains(combinedErrStr, "runtime name") {
+			err = fmt.Errorf("gVisor sandbox runtime '%s' is not registered with Docker daemon. Install gVisor (runsc) or set SANDBOX_RUNTIME=runc for local development: %w", sandboxRuntime, err)
+		}
 	}
 
 	return &ExecutionResult{
