@@ -87,9 +87,11 @@ func APIKeyAuth(s *store.Store) gin.HandlerFunc {
 			return
 		}
 
-		// Increment usage
-		if err := s.IncrementAPIKeyUsage(c.Request.Context(), key.ID); err != nil {
-			fmt.Printf("[Auth Warning] Failed to increment key usage: %v\n", err)
+		// Increment usage count ONLY on execution submission (POST requests), not on log stream connections (GET)
+		if c.Request.Method == http.MethodPost {
+			if err := s.IncrementAPIKeyUsage(c.Request.Context(), key.ID); err != nil {
+				fmt.Printf("[Auth Warning] Failed to increment key usage: %v\n", err)
+			}
 		}
 
 		c.Set("api_key_id", key.ID)
