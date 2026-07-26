@@ -19,6 +19,7 @@ type APIKey struct {
 	ID            string    `json:"id"`
 	KeyHash       string    `json:"key_hash"`
 	KeyPrefix     string    `json:"key_prefix"`
+	KeyType       string    `json:"key_type"` // "DIRECT" or "STREAM"
 	Label         *string   `json:"label"`
 	RequestsToday int       `json:"requests_today"`
 	DailyLimit    int       `json:"daily_limit"`
@@ -48,6 +49,9 @@ func NewStore() (*Store, error) {
 		}
 	}
 
+	// Ensure key_type column exists
+	_, _ = dbPool.Exec(ctx, `ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS key_type VARCHAR(20) DEFAULT 'STREAM';`)
+
 	// 2. Connect to Redis
 	redisAddr := os.Getenv("REDIS_URL")
 	if redisAddr == "" {
@@ -67,16 +71,19 @@ func NewStore() (*Store, error) {
 	}, nil
 }
 
-// CreateAPIKey persists a new hashed API key record to Postgres
-func (s *Store) CreateAPIKey(ctx context.Context, keyHash, keyPrefix string, label *string) (*APIKey, error) {
+// CreateAPIKey persists a new hashed API key record to Postgres with keyType ("DIRECT" | "STREAM")
+func (s *Store) CreateAPIKey(ctx context.Context, keyHash, keyPrefix, keyType string, label *string) (*APIKey, error) {
+	if keyType == "" {
+		keyType = "STREAM"
+	}
 	query := `
-		INSERT INTO api_keys (key_hash, key_prefix, label, requests_today, daily_limit, revoked)
-		VALUES ($1, $2, $3, 0, 100, false)
-		RETURNING id, key_hash, key_prefix, label, requests_today, daily_limit, created_at, last_reset_at, revoked;
+		INSERT INTO api_keys (key_hash, key_prefix, key_type, label, requests_today, daily_limit, revoked)
+		VALUES ($1, $2, $3, $4, 0, 100, false)
+		RETURNING id, key_hash, key_prefix, COALESCE(key_type, 'STREAM'), label, requests_today, daily_limit, created_at, last_reset_at, revoked;
 	`
 	var k APIKey
-	err := s.DB.QueryRow(ctx, query, keyHash, keyPrefix, label).Scan(
-		&k.ID, &k.KeyHash, &k.KeyPrefix, &k.Label, &k.RequestsToday, &k.DailyLimit, &k.CreatedAt, &k.LastResetAt, &k.Revoked,
+	err := s.DB.QueryRow(ctx, query, keyHash, keyPrefix, keyType, label).Scan(
+		&k.ID, &k.KeyHash, &k.KeyPrefix, &k.KeyType, &k.Label, &k.RequestsToday, &k.DailyLimit, &k.CreatedAt, &k.LastResetAt, &k.Revoked,
 	)
 	if err != nil {
 		return nil, err
@@ -87,13 +94,13 @@ func (s *Store) CreateAPIKey(ctx context.Context, keyHash, keyPrefix string, lab
 // GetAPIKeyByHash retrieves an API key by SHA-256 hash string
 func (s *Store) GetAPIKeyByHash(ctx context.Context, keyHash string) (*APIKey, error) {
 	query := `
-		SELECT id, key_hash, key_prefix, label, requests_today, daily_limit, created_at, last_reset_at, revoked
+		SELECT id, key_hash, key_prefix, COALESCE(key_type, 'STREAM'), label, requests_today, daily_limit, created_at, last_reset_at, revoked
 		FROM api_keys
 		WHERE key_hash = $1;
 	`
 	var k APIKey
 	err := s.DB.QueryRow(ctx, query, keyHash).Scan(
-		&k.ID, &k.KeyHash, &k.KeyPrefix, &k.Label, &k.RequestsToday, &k.DailyLimit, &k.CreatedAt, &k.LastResetAt, &k.Revoked,
+		&k.ID, &k.KeyHash, &k.KeyPrefix, &k.KeyType, &k.Label, &k.RequestsToday, &k.DailyLimit, &k.CreatedAt, &k.LastResetAt, &k.Revoked,
 	)
 	if err != nil {
 		return nil, err
@@ -104,13 +111,13 @@ func (s *Store) GetAPIKeyByHash(ctx context.Context, keyHash string) (*APIKey, e
 // GetAPIKeyByPrefix retrieves an API key usage record by prefix string
 func (s *Store) GetAPIKeyByPrefix(ctx context.Context, keyPrefix string) (*APIKey, error) {
 	query := `
-		SELECT id, key_hash, key_prefix, label, requests_today, daily_limit, created_at, last_reset_at, revoked
+		SELECT id, key_hash, key_prefix, COALESCE(key_type, 'STREAM'), label, requests_today, daily_limit, created_at, last_reset_at, revoked
 		FROM api_keys
 		WHERE key_prefix = $1;
 	`
 	var k APIKey
 	err := s.DB.QueryRow(ctx, query, keyPrefix).Scan(
-		&k.ID, &k.KeyHash, &k.KeyPrefix, &k.Label, &k.RequestsToday, &k.DailyLimit, &k.CreatedAt, &k.LastResetAt, &k.Revoked,
+		&k.ID, &k.KeyHash, &k.KeyPrefix, &k.KeyType, &k.Label, &k.RequestsToday, &k.DailyLimit, &k.CreatedAt, &k.LastResetAt, &k.Revoked,
 	)
 	if err != nil {
 		return nil, err

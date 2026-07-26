@@ -97,6 +97,7 @@ func APIKeyAuth(s *store.Store) gin.HandlerFunc {
 
 		c.Set("api_key_id", key.ID)
 		c.Set("api_key_prefix", key.KeyPrefix)
+		c.Set("api_key_type", key.KeyType)
 		c.Next()
 	}
 }
@@ -224,9 +225,19 @@ func main() {
 			keyGenLimiter.Unlock()
 
 			var req struct {
-				Label *string `json:"label"`
+				Label   *string `json:"label"`
+				Type    string  `json:"type"`
+				KeyType string  `json:"key_type"`
 			}
 			_ = c.ShouldBindJSON(&req)
+
+			selectedType := req.Type
+			if selectedType == "" {
+				selectedType = req.KeyType
+			}
+			if selectedType != "DIRECT" && selectedType != "STREAM" {
+				selectedType = "STREAM"
+			}
 
 			rawKey, keyPrefix, keyHash, err := generateAPIKey()
 			if err != nil {
@@ -234,7 +245,7 @@ func main() {
 				return
 			}
 
-			k, err := appStore.CreateAPIKey(c.Request.Context(), keyHash, keyPrefix, req.Label)
+			k, err := appStore.CreateAPIKey(c.Request.Context(), keyHash, keyPrefix, selectedType, req.Label)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store API key"})
 				return
@@ -245,6 +256,8 @@ func main() {
 				"key":         rawKey,
 				"key_prefix":  k.KeyPrefix,
 				"prefix":      k.KeyPrefix,
+				"key_type":    k.KeyType,
+				"type":        k.KeyType,
 				"daily_limit": k.DailyLimit,
 				"limit":       k.DailyLimit,
 				"created_at":  k.CreatedAt.Format(time.RFC3339),
@@ -281,6 +294,8 @@ func main() {
 			c.JSON(http.StatusOK, gin.H{
 				"prefix":         k.KeyPrefix,
 				"key_prefix":     k.KeyPrefix,
+				"key_type":       k.KeyType,
+				"type":          k.KeyType,
 				"requests_today": requestsToday,
 				"daily_limit":    k.DailyLimit,
 				"limit":          k.DailyLimit,
@@ -356,6 +371,48 @@ func main() {
 				"input":    req.Input,
 			},
 		})
+
+		// Check if API key type is DIRECT mode (synchronous result)
+		isDirectKey := false
+		if val, exists := c.Get("api_key_type"); exists && val.(string) == "DIRECT" {
+			isDirectKey = true
+		}
+
+		if isDirectKey {
+			// Poll Redis RAM cache until worker completes execution or timeout
+			deadline := time.Now().Add(8 * time.Second)
+			for time.Now().Before(deadline) {
+				val, err := redisClient.Get(c.Request.Context(), "status:"+subID).Result()
+				if err == nil {
+					var cacheData StatusCache
+					if err := json.Unmarshal([]byte(val), &cacheData); err == nil {
+						if cacheData.Status == "completed" || cacheData.Status == "error" || cacheData.Status == "timeout" {
+							stdoutStr := ""
+							if cacheData.Stdout != nil {
+								stdoutStr = *cacheData.Stdout
+							}
+							stderrStr := ""
+							if cacheData.Stderr != nil {
+								stderrStr = *cacheData.Stderr
+							}
+							execMs := 0
+							if cacheData.ExecutionTimeMs != nil {
+								execMs = *cacheData.ExecutionTimeMs
+							}
+							c.JSON(http.StatusOK, gin.H{
+								"submission_id":     subID,
+								"status":            cacheData.Status,
+								"stdout":            stdoutStr,
+								"stderr":            stderrStr,
+								"execution_time_ms": execMs,
+							})
+							return
+						}
+					}
+				}
+				time.Sleep(100 * time.Millisecond)
+			}
+		}
 
 		c.JSON(http.StatusOK, gin.H{"submission_id": subID})
 	})
