@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"code-engine/runner"
@@ -120,6 +121,33 @@ func StartDailyResetWorker(ctx context.Context, s *store.Store) {
 	}
 }
 
+// Simple in-memory rate limiter for key generation by IP (max 10 requests per hour per IP)
+var keyGenLimiter = struct {
+	sync.Mutex
+	counts map[string][]time.Time
+}{counts: make(map[string][]time.Time)}
+
+func RequireUserAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		token := ""
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			token = strings.TrimPrefix(authHeader, "Bearer ")
+		}
+
+		if token == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "Authentication required. Please sign in to generate API keys.",
+			})
+			return
+		}
+
+		// Store verified token identity for downstream context
+		c.Set("user_token", token)
+		c.Next()
+	}
+}
+
 func main() {
 	// 1. Initialize Redis Connection
 	redisAddr := os.Getenv("REDIS_URL")
@@ -153,8 +181,8 @@ func main() {
 		// 2. Explicitly allow the HTTP methods your app needs
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 
-		// 3. Allow custom headers like Content-Type and X-API-Key
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key")
+		// 3. Allow custom headers like Content-Type, X-API-Key, and Authorization
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key, Authorization")
 
 		// 4. If the browser is sending a Preflight OPTIONS request, stop processing instantly
 		if c.Request.Method == "OPTIONS" {
@@ -168,11 +196,33 @@ func main() {
 	// --- API KEY MANAGEMENT ENDPOINTS ---
 	apiGroup := r.Group("/api")
 	{
-		apiGroup.POST("/keys", func(c *gin.Context) {
+		apiGroup.POST("/keys", RequireUserAuth(), func(c *gin.Context) {
 			if appStore == nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Database store unavailable"})
 				return
 			}
+
+			// 1. IP Rate Limiting (max 10 keys per hour per IP)
+			ip := c.ClientIP()
+			now := time.Now()
+			keyGenLimiter.Lock()
+			timestamps := keyGenLimiter.counts[ip]
+			var valid []time.Time
+			for _, t := range timestamps {
+				if now.Sub(t) < time.Hour {
+					valid = append(valid, t)
+				}
+			}
+			if len(valid) >= 10 {
+				keyGenLimiter.Unlock()
+				c.JSON(http.StatusTooManyRequests, gin.H{
+					"error": "API Key generation limit reached for this IP. Please wait before creating more keys.",
+				})
+				return
+			}
+			keyGenLimiter.counts[ip] = append(valid, now)
+			keyGenLimiter.Unlock()
+
 			var req struct {
 				Label *string `json:"label"`
 			}

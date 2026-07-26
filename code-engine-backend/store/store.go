@@ -118,6 +118,14 @@ func (s *Store) GetAPIKeyByPrefix(ctx context.Context, keyPrefix string) (*APIKe
 	return &k, nil
 }
 
+// GetActiveAPIKeyCount returns the count of non-revoked API keys stored in the database
+func (s *Store) GetActiveAPIKeyCount(ctx context.Context) (int, error) {
+	query := `SELECT COUNT(*) FROM api_keys WHERE revoked = false;`
+	var count int
+	err := s.DB.QueryRow(ctx, query).Scan(&count)
+	return count, err
+}
+
 // RevokeAPIKey flags a key as revoked by key_prefix
 func (s *Store) RevokeAPIKey(ctx context.Context, keyPrefix string) error {
 	query := `UPDATE api_keys SET revoked = true WHERE key_prefix = $1;`
